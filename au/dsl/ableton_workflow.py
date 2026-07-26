@@ -160,8 +160,20 @@ def build_production_workflow(
         scenes=tuple(scenes),
         racks=racks,
         resamples=(
-            ResamplePass("scene_peak", "freeze", 0.55, "granular_texture", duration_s * 0.74),
-            ResamplePass("scene_build", "reverse", 0.35, "transition", duration_s * 0.48),
+            ResamplePass(
+                source_scene_id="scene_peak",
+                operation="freeze",
+                amount=0.55,
+                target_role="granular_texture",
+                entry_s=duration_s * 0.74,
+            ),
+            ResamplePass(
+                source_scene_id="scene_build",
+                operation="reverse",
+                amount=0.35,
+                target_role="transition",
+                entry_s=duration_s * 0.48,
+            ),
         ),
         render_budget_name=budget_name,
     )

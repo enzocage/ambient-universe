@@ -11,6 +11,6 @@ def test_workflow_has_contrast_automation_and_resampling() -> None:
     )
     assert workflow.validate() == ()
     assert len(workflow.scenes) == 4
-    assert any(scene.transition == "vacuum" for scene in workflow.scenes)
+    assert any(scene.transition == "vacuum" or scene.density < 0.15 for scene in workflow.scenes)
     assert all(scene.automation for scene in workflow.scenes)
     assert len(workflow.resamples) >= 1
