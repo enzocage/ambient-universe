@@ -1,0 +1,48 @@
+id: mod.ctrl.constant
+version: 1.0.0
+level: 1
+category: modulator
+family: constant
+display_name: "Konstante Steuerung"
+summary: >
+  Ein fester Steuerwert, der als Modul-Makro exponiert wird und damit
+  automatisch als SynthDef-Kontrolle zur Verfuegung steht. Die Bruecke, ueber
+  die L4 einem Ereignis seine Tonhoehe mitgibt: jedes Ereignis ist eine eigene
+  Synth-Instanz mit eigener Belegung dieser Kontrolle.
+
+ports:
+  out:
+    - {name: out, type: ctrl}
+
+params:
+  value:
+    min: 0.0
+    max: 127.0
+    default: 60.0
+    unit: midinote
+    smooth_ms: 0.0
+
+macros:
+  level:
+    maps:
+      value: {from: 0.0, to: 127.0}
+    curve: lin
+    default: 0.4724409448818898
+
+guarantees:
+  band_hz: [20.0, 20000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: false
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.05
+  voices_max: 64
+
+tags: [modulator, constant, control]
+semantic_vectors: {warmth: 0.5, brightness: 0.5, organic: 0.0, density: 0.0}
+
+license:
+  backend: supercollider
+  nc_weights: false

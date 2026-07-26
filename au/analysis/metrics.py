@@ -144,6 +144,41 @@ def spectral_travel(centroids: NDArray[np.float64]) -> float:
     return float(np.max(log2) - np.min(log2))
 
 
+def first_visible_loop_s(
+    signal: NDArray[np.float64], sample_rate: int, *, max_lag_s: float = 60.0
+) -> float | None:
+    """Schaetzt, ab wann eine Wiederholung im Signal hoerbar wuerde.
+
+    Berechnet die normierte Autokorrelation der Huellkurve (nicht des
+    Rohsignals — Feinstruktur wie Rauschen korreliert nie, die Grobform einer
+    Wiederholung schon) und meldet die kleinste Verzoegerung mit auffaellig
+    hoher Korrelation. ``None`` heisst: keine Wiederholung im geprueften
+    Fenster gefunden — fuer Ambient der wuenschenswerte Fall.
+    """
+    mono = signal if signal.ndim == 1 else np.mean(signal, axis=1)
+    # Envelope durch Downsampling auf ~50 Hz Aufloesung: schnell genug fuer
+    # lange Signale, grob genug, um Formwiederholung statt Feinstruktur zu sehen.
+    hop = max(1, sample_rate // 50)
+    envelope = np.abs(mono[:: max(1, hop)])
+    if envelope.size < 20:
+        return None
+    envelope = envelope - envelope.mean()
+    norm = np.sum(envelope**2)
+    if norm <= 1e-12:
+        return None
+
+    max_lag = int(max_lag_s * sample_rate / hop)
+    max_lag = min(max_lag, envelope.size - 10)
+    if max_lag <= 1:
+        return None
+
+    for lag in range(5, max_lag):
+        corr = np.sum(envelope[:-lag] * envelope[lag:]) / norm
+        if corr > 0.85:
+            return float(lag * hop / sample_rate)
+    return None
+
+
 def stereo_correlation(signal: NDArray[np.float64]) -> float:
     """Pearson-Korrelation zwischen den Kanaelen. 1.0 = mono, 0.0 = unkorreliert."""
     if signal.ndim != 2 or signal.shape[1] < 2:

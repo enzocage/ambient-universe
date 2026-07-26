@@ -74,6 +74,19 @@ def build_brownian_smooth(ctx: BuildContext) -> Signals:
     return {"out": Lag.kr(source=excursion, lag_time=seconds)}  # type: ignore[attr-defined]
 
 
+@implements("mod.ctrl.constant")
+def build_ctrl_constant(ctx: BuildContext) -> Signals:
+    """Ein fester Steuerwert als k-rate-Signal.
+
+    Der Umweg ueber ``DC.kr`` (statt den Python-Float direkt durchzureichen)
+    stellt sicher, dass das Ergebnis ein echtes UGen-Signal ist, das sich mit
+    anderen Signalen desselben Graphen mischen laesst.
+    """
+    from supriya.ugens import DC
+
+    return {"out": DC.kr(source=ctx.param("value", 60.0))}  # type: ignore[attr-defined]
+
+
 @implements("mod.map.linear")
 def build_linear_mapper(ctx: BuildContext) -> Signals:
     """Das einzige Tor von der Analyse auf einen Parameter.

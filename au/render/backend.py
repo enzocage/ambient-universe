@@ -242,7 +242,7 @@ async def render_score_async(
 
     frames, warnings = _verify_artifact(
         candidate,
-        expected_frames=int(round(duration * c.audio.sample_rate)),
+        expected_frames=round(duration * c.audio.sample_rate),
         expected_rate=c.audio.sample_rate,
         expected_channels=c.audio.channels,
         exit_code=exit_code,
