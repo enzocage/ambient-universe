@@ -17,6 +17,7 @@ from au.dsl.blueprint import RoleSlot
 from au.dsl.dna import AlbumDNA
 from au.dsl.element import ElementRecipe
 from au.dsl.field import HarmonicField
+from au.selection.sound_priority import prioritize_voice_modules
 
 #: Grobe Thesen, mit denen ein Kandidat sich von den anderen unterscheidet.
 _THESES: tuple[tuple[str, float, float], ...] = (
@@ -81,23 +82,30 @@ def _voices_for_slot(slot: RoleSlot, registry: Registry, seed: SeedPath | None =
         for m in registry.query(category=Category.GENERATOR)
         if m.level == 2 or (allow_noise and m.id in _WHITELISTED_L1_VOICES)
     ]
-    scored: list[tuple[float, str]] = []
+    modules = []
     for m in candidates:
         low, high = m.guarantees.band_hz
         slot_low, slot_high = slot.band_hz
         overlap = min(high, slot_high) - max(low, slot_low)
         if overlap > 0:
-            role_bonus = 1000.0 if slot.role in m.suggested_roles else 0.0
-            scored.append((role_bonus + overlap, m.id))
+            modules.append(m)
 
-    if seed:
+    prioritized = prioritize_voice_modules(modules, role=slot.role, band_hz=slot.band_hz)
+    # Nur gueltige Kandidaten werden weitergereicht. Zufall wird spaeter in
+    # compose_track innerhalb der stabilen Kandidatenreihenfolge genutzt.
+    ordered = [item.module_id for item in prioritized if item.tier.value != "rejected"]
+
+    if seed and len(ordered) > 1:
         import random
-        rng = random.Random(int(seed.value & 0xFFFF_FFFF))
-        scored.sort(key=lambda pair: (pair[0] + rng.uniform(-10.0, 10.0)), reverse=True)
-    else:
-        scored.sort(key=lambda pair: (-pair[0], pair[1]))
 
-    return [mid for _, mid in scored] or [m.id for m in candidates]
+        rng = random.Random(int(seed.value & 0xFFFF_FFFF))
+        # Nur lokale Permutation gleichwertiger Nachbarn: S/A-Kandidaten
+        # bleiben vor C-Kandidaten und der Score bleibt die Hauptentscheidung.
+        for start in range(0, len(ordered), 3):
+            block = ordered[start : start + 3]
+            rng.shuffle(block)
+            ordered[start : start + 3] = block
+    return ordered or [m.id for m in candidates]
 
 
 def propose_candidates(
