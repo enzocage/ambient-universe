@@ -16,11 +16,18 @@ from pydantic import BaseModel
 from au.core.config import get_config
 from au.core.registry import load_registry
 from au.studio.jobs import Job, get_job, list_jobs, start_job
+from au.presets import get_preset_catalog
+from au.learning.rating import RatingStore
+from au.learning.presentation_memory import PresentationMemory, Presentation
+from uuid import uuid4
 
 app = FastAPI(title="Ambient Universe Studio")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 _STATIC_DIR = Path(__file__).parent / "static"
+_LEARNING_DIR = get_config().cache_dir / "learning"
+_RATING_STORE = RatingStore(_LEARNING_DIR / "preset_ratings.json")
+_PRESENTATION_MEMORY = PresentationMemory(_LEARNING_DIR / "preset_presentations.json")
 
 
 class ComposeRequest(BaseModel):
@@ -32,6 +39,14 @@ class ComposeRequest(BaseModel):
 class LayerPreviewRequest(BaseModel):
     macro_overrides: dict[str, float] = {}
     duration_s: float = 12.0
+
+
+class PresetRatingRequest(BaseModel):
+    preset_id: str
+    rating: int
+    role: str = "moving_pad"
+    context: str = "preset-lab"
+    labels: tuple[str, ...] = ()
 
 
 def _job_summary(job: Job) -> dict[str, Any]:
@@ -191,6 +206,49 @@ def catalog_modules() -> dict[str, Any]:
             for item in matrix.modules
         ]
     }
+
+
+@app.get("/api/presets")
+def presets(role: str | None = None, limit: int = 48) -> dict[str, Any]:
+    """Preset-Labor: neue Beispiele zuerst, bereits Gezeigtes bleibt sichtbar."""
+    catalog = get_preset_catalog()
+    items = catalog.for_role(role, limit=None) if role else catalog.presets
+    result = []
+    for preset in items:
+        if len(result) >= max(1, min(200, limit)):
+            break
+        presentation_id = f"presentation.{preset.id}"
+        if not _PRESENTATION_MEMORY.has_candidate(preset.id):
+            _PRESENTATION_MEMORY.remember(Presentation(
+                presentation_id=presentation_id, candidate_id=preset.id,
+                audio_fingerprint=preset.id, module_id=preset.backend_module_id,
+                preset_fingerprint=preset.id, context="preset-lab", is_new_option=True,
+            ))
+        result.append({
+            **preset.model_dump(),
+            "rating": _RATING_STORE.mean_for(preset.id, role=role),
+            "shown": _PRESENTATION_MEMORY.has_candidate(preset.id),
+            "presentation_id": presentation_id,
+        })
+    return {"count": len(catalog), "profiles": len(catalog.profiles), "presets": result}
+
+
+@app.post("/api/presets/rate")
+def rate_preset(req: PresetRatingRequest) -> dict[str, Any]:
+    preset = next((p for p in get_preset_catalog().presets if p.id == req.preset_id), None)
+    if preset is None:
+        raise HTTPException(404, "Unbekanntes Preset")
+    event = _RATING_STORE.add(
+        presentation_id=f"presentation.{preset.id}", candidate_id=preset.id,
+        audio_fingerprint=preset.id, role=req.role, context=req.context,
+        rating=req.rating, labels=req.labels,
+    )
+    return {"saved": True, "preset_id": preset.id, "mean": _RATING_STORE.mean_for(preset.id, role=req.role), "rating_id": event.rating_id}
+
+
+@app.get("/api/presets/preferences")
+def preset_preferences() -> dict[str, Any]:
+    return {"ratings": [event.__dict__ for event in _RATING_STORE.events], "rated_count": len(_RATING_STORE.events)}
 
 
 

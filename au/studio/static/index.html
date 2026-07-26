@@ -218,6 +218,16 @@
   .status-chip.running { background: #332a10; color: var(--warn); }
   .status-chip.error { background: #331414; color: var(--err); }
   .status-chip.pending { background: #1c1f2a; color: var(--muted); }
+  .preset-lab { grid-column: 1 / -1; }
+  .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .preset-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .preset-card h4 { margin: 0 0 5px; font-size: .9rem; }
+  .preset-card small { color: var(--muted); display: block; min-height: 32px; }
+  .preset-card .preset-actions { display: flex; gap: 6px; margin-top: 9px; align-items: center; }
+  .preset-card button { padding: 7px 10px; font-size: .78rem; }
+  .rating-row { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 8px; }
+  .rating-row button { background: #242b3b; color: var(--text); padding: 4px 7px; }
+  .rating-row button.selected { background: var(--accent); color: #08101e; }
 </style>
 </head>
 <body>
@@ -253,6 +263,17 @@
         </div>
         <button id="composeBtn">Komponieren</button>
       </div>
+    </div>
+
+    <div class="panel preset-lab">
+      <h2>VSTi Preset-Labor — hören, bewerten, lernen</h2>
+      <p class="small" style="color:var(--muted)">Die Beispiele werden lokal synthetisch vorgehört. Deine 1–10-Bewertung wird dauerhaft gespeichert und fließt in die spätere Presetauswahl der Komposition ein.</p>
+      <div class="row">
+        <div><label for="presetRole">Rolle</label><select id="presetRole"><option>moving_pad</option><option>foundation</option><option>arpeggiator</option><option>bass_sequence</option><option>harmonic_drone</option><option>atmospheric_noise</option></select></div>
+        <button id="loadPresetsBtn">Neue Klangbeispiele laden</button>
+        <span id="presetStats" class="small" style="color:var(--muted)"></span>
+      </div>
+      <div id="presetLabGrid" class="preset-grid"><div class="empty">Klicke auf „Neue Klangbeispiele laden“.</div></div>
     </div>
 
     <div class="panel">
@@ -489,6 +510,36 @@ function renderPresets() {
   });
 }
 renderPresets();
+
+let presetAudioContext = null;
+function previewPreset(preset) {
+  presetAudioContext = presetAudioContext || new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = presetAudioContext, now = ctx.currentTime;
+  const osc = ctx.createOscillator(), gain = ctx.createGain(), filter = ctx.createBiquadFilter();
+  const brightness = preset.macros.brightness || .5, body = preset.macros.body || .5;
+  osc.type = preset.family === "fm" ? "triangle" : preset.family === "waveshaping" ? "sawtooth" : "sine";
+  osc.frequency.setValueAtTime(110 + brightness * 220, now);
+  osc.frequency.exponentialRampToValueAtTime(220 + body * 330, now + 2.2);
+  filter.type = "lowpass"; filter.frequency.value = 500 + brightness * 6000; filter.Q.value = 1 + body * 10;
+  gain.gain.setValueAtTime(.0001, now); gain.gain.exponentialRampToValueAtTime(.18, now + .08); gain.gain.exponentialRampToValueAtTime(.0001, now + 3.5);
+  osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 3.7);
+}
+async function loadPresetLab() {
+  const role = el("presetRole").value, res = await fetch(API + "/api/presets?role=" + encodeURIComponent(role) + "&limit=36");
+  const data = await res.json(); el("presetStats").textContent = data.profiles + " Synth-Profile · " + data.count + " Presets gesamt";
+  const grid = el("presetLabGrid"); grid.innerHTML = "";
+  data.presets.forEach(preset => {
+    const card = document.createElement("div"); card.className = "preset-card";
+    card.innerHTML = `<h4>${preset.name}</h4><small>${preset.family} · ${preset.backend_module_id}<br>${preset.rating ? "Dein Mittelwert: " + preset.rating.toFixed(1) : "Noch nicht bewertet"}</small>`;
+    const actions = document.createElement("div"); actions.className = "preset-actions";
+    const play = document.createElement("button"); play.textContent = "▶ Hören"; play.onclick = () => previewPreset(preset); actions.appendChild(play); card.appendChild(actions);
+    const ratings = document.createElement("div"); ratings.className = "rating-row";
+    for (let score = 1; score <= 10; score++) { const b = document.createElement("button"); b.textContent = score; b.onclick = async () => { await fetch(API + "/api/presets/rate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({preset_id:preset.id, rating:score, role})}); loadPresetLab(); }; ratings.appendChild(b); }
+    card.appendChild(ratings); grid.appendChild(card);
+  });
+}
+el("loadPresetsBtn").addEventListener("click", loadPresetLab);
+loadPresetLab();
 
 el("composeBtn").addEventListener("click", async () => {
   const prompt = el("prompt").value.trim();
