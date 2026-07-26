@@ -1285,6 +1285,75 @@ Verbindliche Tests:
 
 ---
 
+# STUFE 4C – Referenzmuster als ganzheitliche Produktionssprache
+
+## Ziel
+
+Die 50 beschriebenen Klangmomente werden als kuratierte `SonicPattern`-Bibliothek genutzt.
+Sie sind keine bloße Ideensammlung und keine ungeprüften Presets, sondern beschreiben eine
+musikalische Geste aus Quelle, Bewegung, Artikulation, Raum und dramaturgischer Funktion.
+
+Die Bibliothek ist nach fünf Familien organisiert:
+
+- Oszillator-, Sync- und Modulationsgesten: Hard Sync, Supersaw Drift, FM-Pluck, PWM-Bass,
+  Ringmod-Arpeggio, Glide und Audio-Rate-Pitch.
+- Filter- und Resonanzgesten: Filter Ping, Formantbewegung, Acid Accent, Comb-Pluck,
+  Tracking-Notch und resonanter Unterwasser-Bass.
+- Raum-, Delay- und Hallgesten: Shimmer, ungerades Ping-Pong, Freeze, Gated Reverb,
+  Tape-Drift, Reverse Bloom, Haas und Multi-Tap.
+- Dynamik-, Sättigungs- und Lo-Fi-Gesten: Sidechain-Pump, Tape-Wave-Crush, Vinyl Flutter,
+  Bitcrush, Unisono-Wall, Transient-Bass, Rhythm-Gate und Multiband-Platzierung.
+- Komplexe Modulationsgesten: Sample-and-Hold, Shepherd-Rise, Verstärkeratem,
+  selektives Legato, invertierte Hüllkurve, Chorus-Drift, Micro-Delay und Wavetable-Rise.
+
+## Produktionsregeln
+
+1. Jede Geste erhält eine Rolle, einen Abschnittsfit, erforderliche Module und einen Risikowert.
+2. Eine Geste wird zuerst als Einzelklang, dann als Rollenpaar und erst danach im Arrangement
+   validiert.
+3. Hohe Risiken wie Selbstoszillation, starkes Feedback, Audio-Rate-FM und extreme
+   Downsampling-Effekte werden nur auf Höhepunkt-, Übergangs- oder Kontrastrollen verwendet.
+4. Niedrigrisiko-Gesten wie Supersaw Drift, Amplifier Breath, Tape Drift und Multiband-Platz
+   dürfen Foundation, Drone und Outro tragen.
+5. Jede Produktion benötigt mindestens eine klare Körpergeste, eine Bewegungs-/Atemgeste,
+   eine artikulierte Rhythmusgeste und eine räumliche Geste.
+6. Keine zwei benachbarten Abschnitte verwenden dieselbe dominante Geste ohne Transformation.
+7. Rhythmusrollen bevorzugen Gummi-Bass, FM-Pluck, Acid Accent, Odd Ping-Pong,
+   Transient-Bass, Rhythmic Gate und Legato-Reset nur in passenden Dichten.
+8. Der Weltenbrand-Aufbau ist eine Formgeste über acht Takte, kein Dauerpreset.
+
+## Priorisierung
+
+`SoundPriorityEngine` erhält pro Kandidat zusätzlich:
+
+- `pattern_family`,
+- `function`,
+- `section_fit`,
+- `risk`,
+- `requires`,
+- bereits validierte Nutzer- und Ensemblebewertungen.
+
+Eine Geste wird bevorzugt, wenn sie die aktuelle musikalische Funktion erfüllt, eine
+unterrepräsentierte Klangdimension ergänzt und mit den bereits gewählten Stimmen kompatibel
+ist. Zufall darf nur erfolgreiche Gesten innerhalb derselben Qualitäts- und Risikoklasse
+permutieren.
+
+## Abnahme
+
+Ein 60-Sekunden-Track besteht dieses Gate nur, wenn mindestens vier unterschiedliche Gesten
+hörbar nachweisbar sind, darunter:
+
+- eine Bass- oder Körpergeste,
+- eine melodisch/arithmetische Bewegungs- oder Arpeggiogeste,
+- eine Transienten- oder Groovegeste,
+- eine Raum-/Nachgeste.
+
+Mindestens eine Geste muss über mehrere Abschnitte transformiert werden. Beschreibungen dürfen
+nicht als wörtliche klangliche Behauptung gelten: Nur gerenderte und gehörte Ergebnisse werden
+in den `SuccessfulVariantPool` aufgenommen.
+
+---
+
 # STUFE 5 – Musikalische Arpeggio-Engine
 
 ## Ziel
