@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from au.dsl.escalation import EscalationGraph, build_escalation_graph
+
 HierarchyLevel = Literal["gesture", "event", "motif", "phrase", "section", "form"]
 
 
@@ -72,6 +74,7 @@ class HierarchicalScore(BaseModel):
     form: FormPlan
     phrases: tuple[PhrasePlan, ...]
     refs: tuple[HierarchyRef, ...] = ()
+    escalation: EscalationGraph | None = None
 
     def section_for(self, time_s: float) -> SectionPlan:
         for section in self.form.sections:
@@ -144,7 +147,11 @@ def build_default_hierarchical_score(
         return_motif_id=motif_id,
         peak_section_id="section_peak",
     )
-    score = HierarchicalScore(form=form, phrases=tuple(phrases))
+    score = HierarchicalScore(
+        form=form,
+        phrases=tuple(phrases),
+        escalation=build_escalation_graph(active_roles),
+    )
     errors = score.validate_lineage()
     if errors:
         raise ValueError("Ungueltige Hierarchie: " + "; ".join(errors))
