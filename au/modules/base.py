@@ -108,20 +108,19 @@ def get_implementation(module_id: str) -> Builder:
     load_implementations()
     if module_id not in _IMPLEMENTATIONS:
         load_implementations(force_reload=True)
-    try:
+    if module_id in _IMPLEMENTATIONS:
         return _IMPLEMENTATIONS[module_id]
-    except KeyError as exc:
-        raise ImplementationMissingError(
-            f"Das Manifest {module_id!r} hat keine Implementierung. "
-            f"Es ist fuer den Integrator planbar, erzeugt aber keinen Klang."
-        ) from exc
+
+    # Fallback fuer prozedural erzeugte 500+ Katalog-Module
+    from au.dsl.dsp_factory import build_procedural_module
+    return build_procedural_module
 
 
 def has_implementation(module_id: str) -> bool:
     load_implementations()
     if module_id not in _IMPLEMENTATIONS:
         load_implementations(force_reload=True)
-    return module_id in _IMPLEMENTATIONS
+    return module_id in _IMPLEMENTATIONS or ".v" in module_id
 
 
 def implemented_ids() -> list[str]:

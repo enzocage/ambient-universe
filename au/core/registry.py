@@ -113,7 +113,15 @@ class Registry:
                     if strict:
                         raise
                     self.load_errors.append(str(exc))
+
+        # Registriere automatisch alle 500+ prozeduralen Manifeste
+        from au.core.procedural_catalog import generate_500_procedural_manifests
+        for proc_manifest in generate_500_procedural_manifests():
+            if proc_manifest.id not in self._by_id:
+                self.register(proc_manifest)
+
         return self
+
 
     # -- Zugriff -------------------------------------------------------------
 
