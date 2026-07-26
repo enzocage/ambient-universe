@@ -23,15 +23,20 @@ from au.dsl.blueprint import Blueprint
 from au.dsl.dna import AlbumDNA
 from au.dsl.dramaturgy import DramaturgyArc, generate_arc
 from au.dsl.element import ElementRecipe
+from au.dsl.evolution import EvolutionPlan, generate_evolution_plan
 from au.dsl.harmony import (
     ChordTimeline,
     generate_structured_chord_timeline,
 )
 from au.dsl.layer import LayerInstance
 from au.dsl.motif import Motif, generate_motif, generate_phrase
+from au.dsl.motif_transformations import TransformedMotif, transform_motif
 from au.dsl.relations import Relation, RelationSet
 from au.dsl.rhythm import Clock, tempo_from_character
 from au.dsl.section import Section, SectionArrangement, TrackPlan, generate_section_arrangement
+from au.dsl.section_profiles import SectionProfile, generate_section_profiles
+from au.dsl.source_banks import build_tone_dna_for_entry, select_diverse_source_ensemble
+from au.dsl.tone_dna import ToneDNA
 from au.integrator.blueprint import derive_blueprint
 from au.integrator.proposals import propose_candidates
 from au.render.track import TrackRenderResult, render_track
@@ -55,6 +60,11 @@ class ComposeResult:
     quality_report: MusicalQualityReport
     section_arrangement: SectionArrangement
     motifs: tuple[Motif, ...]
+    section_profiles: dict[str, SectionProfile]
+    evolution_plans: dict[str, EvolutionPlan]
+    tone_dnas: dict[str, ToneDNA]
+    transformed_motifs: tuple[TransformedMotif, ...]
+
 
 
 def compose_track(
@@ -88,6 +98,7 @@ def compose_track(
 
     # Musikalische Struktur-Planung: Sektionen, Akkorde & Motive VORAB erzeugen
     section_arr = generate_section_arrangement(duration_s)
+    section_profs = generate_section_profiles(section_arr, root_seed.child("sec_profs"))
     chord_prog = generate_structured_chord_timeline(duration_s, blueprint.field, seed=root_seed.child("harmony"))
     chords = chord_prog.timeline
 
@@ -95,12 +106,28 @@ def compose_track(
     sec_motif = generate_motif("motif_sec", blueprint.field, root_seed.child("sec_motif"), length=3)
     main_phrase = generate_phrase("phrase_main", main_motif, root_seed.child("main_phrase"), repetitions=4, pause_s=3.0)
 
+    # Motiv-Transformationen für Sektionskontraste
+    t_motif_1 = transform_motif(main_motif, blueprint.field, root_seed.child("t_motif_1"), kind="transposed", step_shift=3)
+    t_motif_2 = transform_motif(main_motif, blueprint.field, root_seed.child("t_motif_2"), kind="rhythmic_stretch", stretch_factor=1.5)
+    t_motif_3 = transform_motif(sec_motif, blueprint.field, root_seed.child("t_motif_3"), kind="inverted")
+    transformed_motifs = (t_motif_1, t_motif_2, t_motif_3)
+
     recipes: dict[str, ElementRecipe] = {}
     layers: list[LayerInstance] = []
     role_to_layer: dict[str, str] = {}
 
+    role_names = tuple(s.role for s in slots)
+    source_ensemble = select_diverse_source_ensemble(role_names, root_seed.child("ensemble"))
+    tone_dnas: dict[str, ToneDNA] = {}
+    evolution_plans: dict[str, EvolutionPlan] = {}
+
     for slot_idx, slot in enumerate(slots):
         report(f"Erzeuge Kandidaten für Slot „{slot.role}“ …")
+        bank_entry = source_ensemble.get(slot.role)
+        if bank_entry:
+            t_dna = build_tone_dna_for_entry(bank_entry, slot.role, root_seed.child("dna", slot.slot_id))
+            tone_dnas[slot.slot_id] = t_dna
+
         candidates = propose_candidates(
             slot, dna, blueprint.field, reg, seed=root_seed.child("propose", slot.slot_id), n=5
         )
@@ -116,9 +143,13 @@ def compose_track(
         )
         recipes[chosen.id] = chosen
 
-
         layer_id = f"{slot.slot_id}_layer"
         role_to_layer[slot.role] = layer_id
+
+        evo_plan = generate_evolution_plan(
+            layer_id, duration_s, root_seed.child("evo", layer_id), is_continuous=(pattern_kind == "sustained")
+        )
+        evolution_plans[layer_id] = evo_plan
 
         # Gated Layer Activity nach Sektionsplan
         entry_t = 0.0
@@ -209,5 +240,10 @@ def compose_track(
         quality_report=quality,
         section_arrangement=section_arr,
         motifs=(main_motif, sec_motif),
+        section_profiles=section_profs,
+        evolution_plans=evolution_plans,
+        tone_dnas=tone_dnas,
+        transformed_motifs=transformed_motifs,
     )
+
 

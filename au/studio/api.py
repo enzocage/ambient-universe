@@ -121,8 +121,31 @@ def _job_summary(job: Job) -> dict[str, Any]:
                 }
                 for layer in r.solve_result.layers
             ],
+            "tone_dnas": {
+                slot_id: dna.to_dict()
+                for slot_id, dna in (r.tone_dnas or {}).items()
+            },
+            "section_profiles": {
+                name: {
+                    "active_roles": list(prof.active_roles),
+                    "preferred_families": [str(f) for f in prof.preferred_families],
+                    "brightness": prof.spectral_brightness,
+                    "spatial_width": prof.spatial_width,
+                    "tension": prof.tension_target,
+                }
+                for name, prof in (r.section_profiles or {}).items()
+            },
+            "transformed_motifs": [
+                {
+                    "original_id": tm.original_motif_id,
+                    "kind": tm.transformation_kind,
+                    "count": len(tm.notes),
+                }
+                for tm in (r.transformed_motifs or ())
+            ],
         }
     return summary
+
 
 
 @app.get("/api/modules")
