@@ -525,8 +525,19 @@ function previewPreset(preset) {
   osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 3.7);
 }
 async function loadPresetLab() {
-  const role = el("presetRole").value, res = await fetch(API + "/api/presets?role=" + encodeURIComponent(role) + "&limit=36");
-  const data = await res.json(); el("presetStats").textContent = data.profiles + " Synth-Profile · " + data.count + " Presets gesamt";
+  const role = el("presetRole").value;
+  const res = await fetch(API + "/api/presets?role=" + encodeURIComponent(role) + "&limit=36");
+  if (!res.ok) {
+    el("presetStats").textContent = "Preset-API nicht verfügbar — Server bitte neu starten.";
+    el("presetLabGrid").innerHTML = `<div class="empty">Die laufende Serverinstanz kennt /api/presets noch nicht. Bitte den Studio-Server neu starten.</div>`;
+    return;
+  }
+  const data = await res.json();
+  if (!Array.isArray(data.presets)) {
+    el("presetStats").textContent = "Ungültige Preset-Antwort.";
+    return;
+  }
+  el("presetStats").textContent = data.profiles + " Synth-Profile · " + data.count + " Presets gesamt";
   const grid = el("presetLabGrid"); grid.innerHTML = "";
   data.presets.forEach(preset => {
     const card = document.createElement("div"); card.className = "preset-card";
