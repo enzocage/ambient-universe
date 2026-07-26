@@ -47,7 +47,7 @@ def _write_card(recipe: ElementRecipe, analysis: dict[str, float]) -> str:
         f"- RMS: {analysis['rms']:.4f}",
         f"- Spektralschwerpunkt: {analysis['centroid_hz']:.0f} Hz",
         f"- Stereo-Korrelation: {analysis['stereo_correlation']:+.2f}",
-        f"- Erste sichtbare Wiederholung: "
+        "- Erste sichtbare Wiederholung: "
         + (
             f"{analysis['loop_visible_s']:.0f}s"
             if analysis["loop_visible_s"] >= 0

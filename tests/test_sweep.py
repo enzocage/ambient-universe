@@ -14,12 +14,19 @@ from au.render.sweep import sweep_macro
 
 pytestmark = [pytest.mark.audio, pytest.mark.slow]
 
-_VOICES = [
+_VOICES: list[str] = [
     "gen.drone.wavetable_resonator",
     "gen.object.modal_bell",
     "gen.drone.sub_bass",
     "gen.texture.granular_cloud",
     "gen.arpeggio.pulse_sequence",
+    "gen.fm.dual_operator",
+    "gen.additive.harmonic_partials",
+    "gen.physical.plucked_string",
+    "gen.vocal.formant_pad",
+    "gen.spectral.phase_freeze",
+    "gen.synth.wavefolder",
+    "gen.noise.stochastic_trigger",
 ]
 
 
@@ -56,7 +63,6 @@ def test_noise_driven_voices_are_deterministic_across_separate_renders(
     au.integrator.compose) -- der Compiler setzt seither RandSeed.ir() beim
     Aufbau jeder SynthDef (au/render/compiler.py)."""
     from au.core.seeds import SeedPath
-    from au.core.hashing import sha256_audio
     from au.render.voice import render_graph, single_voice_graph
 
     seed = SeedPath.root(99).child("noise_determinism_test")

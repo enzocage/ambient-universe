@@ -1,0 +1,47 @@
+id: gen.spectral.phase_freeze
+version: 1.0.0
+level: 2
+category: generator
+family: spectral_synthesis
+display_name: "Phase Vocoder Spectral Freeze"
+summary: >
+  Spektrale Phase-Vocoder-Synthese fuer eingefrorene Ambient-Klanglandschaften.
+
+guarantees:
+  band_hz: [30.0, 16000.0]
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      blur_amount: {from: 0.0, to: 0.8}
+    default: 0.4
+  body:
+    maps:
+      blur_amount: {from: 0.1, to: 0.6}
+    default: 0.5
+  noise_ratio:
+    maps:
+      blur_amount: {from: 0.0, to: 0.5}
+    default: 0.2
+  motion:
+    maps:
+      blur_amount: {from: 0.1, to: 0.9}
+    default: 0.3
+  material:
+    maps:
+      blur_amount: {from: 0.0, to: 1.0}
+    default: 0.3
+
+params:
+  blur_amount:
+    min: 0.0
+    max: 1.0
+    default: 0.3

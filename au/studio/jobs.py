@@ -53,7 +53,7 @@ def _run(job: Job, cfg: Config) -> None:
         )
         job.result = result
         job.status = "done"
-    except Exception as exc:  # noqa: BLE001 -- dem Nutzer im Browser anzeigen, nicht verschlucken
+    except Exception as exc:
         job.status = "error"
         job.error = str(exc)
         job.append(f"Fehler: {exc}")

@@ -185,7 +185,7 @@ def build_modal_bell(ctx: BuildContext) -> Signals:
 @implements("gen.drone.sub_bass")
 def build_sub_bass(ctx: BuildContext) -> Signals:
     """Tiefes Sub-Bass-Fundament mit modulierbarer Saettigung."""
-    from supriya.ugens import DelayN, HPF, LFNoise2, LPF, SinOsc
+    from supriya.ugens import HPF, LPF, DelayN, LFNoise2, SinOsc
 
     pitch = ctx.input("pitch", 36.0)
     frequency = _midi_to_hz(pitch)
@@ -297,6 +297,211 @@ def build_pulse_sequence(ctx: BuildContext) -> Signals:
 
     envelope = abs(filtered).lagged(0.01 + decay_time * 0.1)
     return {"out": [filtered * 0.45, filtered * 0.45], "env_follow": envelope}
+
+
+# ---------------------------------------------------------------------------
+# gen.fm.dual_operator
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.fm.dual_operator")
+def build_fm_dual_operator(ctx: BuildContext) -> Signals:
+    """Zwei-Operator FM-Synthesizer."""
+    from supriya.ugens import HPF, LPF, LFNoise2, SinOsc
+
+    pitch = ctx.input("pitch", 57.0)
+    freq = _midi_to_hz(pitch)
+
+    mod_index = ctx.param("mod_index", 2.0)
+    sub_mix = ctx.param("sub_mix", 0.4)
+    lfo_rate = ctx.param("lfo_rate", 0.15)
+    harmonic_ratio = ctx.param("harmonic_ratio", 2.0)
+
+    lfo = LFNoise2.kr(frequency=lfo_rate) * 0.5 + 1.0  # type: ignore[attr-defined]
+    mod_freq = freq * harmonic_ratio
+    modulator = SinOsc.ar(frequency=mod_freq) * (mod_freq * mod_index * lfo)  # type: ignore[attr-defined]
+
+    carrier = SinOsc.ar(frequency=freq + modulator) * 0.35  # type: ignore[attr-defined]
+    sub = SinOsc.ar(frequency=freq * 0.5) * sub_mix * 0.25  # type: ignore[attr-defined]
+
+    sig = carrier + sub
+    sig = HPF.ar(source=sig, frequency=35.0)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sig, frequency=12000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+# ---------------------------------------------------------------------------
+# gen.additive.harmonic_partials
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.additive.harmonic_partials")
+def build_additive_harmonic_partials(ctx: BuildContext) -> Signals:
+    """Additive Synthese aus 8 Sinus-Teiltoenen."""
+    from supriya.ugens import HPF, LPF, LFNoise2, SinOsc
+
+    pitch = ctx.input("pitch", 48.0)
+    freq = _midi_to_hz(pitch)
+
+    partial_tilt = ctx.param("partial_tilt", 0.0)
+    fundamental_gain = ctx.param("fundamental_gain", 0.8)
+    detune_spread = ctx.param("detune_spread", 0.015)
+    lfo_rate = ctx.param("lfo_rate", 0.2)
+
+    lfo = LFNoise2.kr(frequency=lfo_rate) * detune_spread  # type: ignore[attr-defined]
+    sig = SinOsc.ar(frequency=freq * (1.0 + lfo)) * fundamental_gain * 0.3  # type: ignore[attr-defined]
+
+    for harmonic in range(2, 7):
+        gain = (1.0 / (harmonic ** (1.0 - partial_tilt * 0.5))) * 0.15
+        detune = (harmonic % 2 - 0.5) * detune_spread
+        p_sig = SinOsc.ar(frequency=freq * harmonic * (1.0 + detune)) * gain  # type: ignore[attr-defined]
+        sig = sig + p_sig
+
+    sig = HPF.ar(source=sig, frequency=30.0)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sig, frequency=14000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+# ---------------------------------------------------------------------------
+# gen.physical.plucked_string
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.physical.plucked_string")
+def build_plucked_string(ctx: BuildContext) -> Signals:
+    """Karplus-Strong Physical Modeling einer gezupften Saite."""
+    from supriya.ugens import HPF, LPF, Pluck, WhiteNoise
+
+    pitch = ctx.input("pitch", 60.0)
+    freq = _midi_to_hz(pitch)
+
+    damping = ctx.param("damping", 0.5)
+    decay_time = ctx.param("decay_time", 3.0)
+    exciter_noise = ctx.param("exciter_noise", 0.2)
+
+    trig = ctx.input("excitation") if ctx.has_input("excitation") else 1.0
+    pluck_sig = Pluck.ar(  # type: ignore[attr-defined]
+        source=WhiteNoise.ar() * exciter_noise,  # type: ignore[attr-defined]
+        trigger=trig,
+
+        maximum_delay_time=0.1,
+        delay_time=1.0 / freq,
+        decay_time=decay_time,
+        coefficient=damping,
+    )
+    sig = HPF.ar(source=pluck_sig, frequency=40.0)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sig, frequency=11000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.02)
+    return {"out": [sig * 0.4, sig * 0.4], "env_follow": env}
+
+
+# ---------------------------------------------------------------------------
+# gen.vocal.formant_pad
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.vocal.formant_pad")
+def build_formant_pad(ctx: BuildContext) -> Signals:
+    """Chorale Formantsynthese mit Vokal-Resonanzen."""
+    from supriya.ugens import BPF, HPF, Saw, WhiteNoise
+
+    pitch = ctx.input("pitch", 55.0)
+    freq = _midi_to_hz(pitch)
+
+    formant_shift = ctx.param("formant_shift", 1.0)
+    breath_mix = ctx.param("breath_mix", 0.08)
+
+    raw_saw = Saw.ar(frequency=freq) * 0.2  # type: ignore[attr-defined]
+    breath = WhiteNoise.ar() * breath_mix * 0.15  # type: ignore[attr-defined]
+    src = raw_saw + breath
+
+    f1 = BPF.ar(source=src, frequency=600.0 * formant_shift, reciprocal_of_q=0.15) * 0.4  # type: ignore[attr-defined]
+    f2 = BPF.ar(source=src, frequency=1200.0 * formant_shift, reciprocal_of_q=0.15) * 0.3  # type: ignore[attr-defined]
+    f3 = BPF.ar(source=src, frequency=2400.0 * formant_shift, reciprocal_of_q=0.15) * 0.2  # type: ignore[attr-defined]
+
+    sig = HPF.ar(source=f1 + f2 + f3, frequency=50.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.08)
+    return {"out": [sig * 0.5, sig * 0.5], "env_follow": env}
+
+
+# ---------------------------------------------------------------------------
+# gen.spectral.phase_freeze
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.spectral.phase_freeze")
+def build_phase_freeze(ctx: BuildContext) -> Signals:
+    """Phase Vocoder Spectral Freeze Simulator."""
+    from supriya.ugens import BPF, HPF, LFNoise2, PinkNoise, SinOsc
+
+    pitch = ctx.input("pitch", 48.0)
+    freq = _midi_to_hz(pitch)
+
+    spectral_blur = ctx.param("blur_amount", 0.3)
+    lfo = LFNoise2.kr(frequency=0.1) * spectral_blur  # type: ignore[attr-defined]
+
+    s1 = SinOsc.ar(frequency=freq * (1.0 + lfo)) * 0.25  # type: ignore[attr-defined]
+    s2 = SinOsc.ar(frequency=freq * 1.5 * (1.0 - lfo)) * 0.15  # type: ignore[attr-defined]
+    noise = BPF.ar(source=PinkNoise.ar(), frequency=freq * 2.0, reciprocal_of_q=0.2) * 0.1  # type: ignore[attr-defined]
+
+    sig = HPF.ar(source=s1 + s2 + noise, frequency=40.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.1)
+    return {"out": [sig * 0.4, sig * 0.4], "env_follow": env}
+
+
+# ---------------------------------------------------------------------------
+# gen.synth.wavefolder
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.synth.wavefolder")
+def build_wavefolder(ctx: BuildContext) -> Signals:
+    """Non-linear Analog Wavefolder Oszillator."""
+    from supriya.ugens import HPF, LPF, Fold, SinOsc
+
+    pitch = ctx.input("pitch", 40.0)
+    freq = _midi_to_hz(pitch)
+
+    fold_drive = ctx.param("fold_drive", 2.0)
+    sub_octave = ctx.param("sub_octave", 0.5)
+
+    base_osc = SinOsc.ar(frequency=freq) * fold_drive  # type: ignore[attr-defined]
+    folded = Fold.ar(source=base_osc, minimum=-0.8, maximum=0.8) * 0.3  # type: ignore[attr-defined]
+    sub = SinOsc.ar(frequency=freq * 0.5) * sub_octave * 0.25  # type: ignore[attr-defined]
+
+    sig = HPF.ar(source=folded + sub, frequency=30.0)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sig, frequency=8000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+
+    return {"out": [sig, sig], "env_follow": env}
+
+
+# ---------------------------------------------------------------------------
+# gen.noise.stochastic_trigger
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.noise.stochastic_trigger")
+def build_stochastic_trigger(ctx: BuildContext) -> Signals:
+    """Stochastischer Dust- & Crackle-Resonanz-Generator."""
+    from supriya.ugens import BPF, HPF, LPF, Dust, PinkNoise
+
+    density_hz = ctx.param("density_hz", 12.0)
+    resonance_freq = ctx.param("resonance_freq", 2400.0)
+    crackle_mix = ctx.param("crackle_mix", 0.2)
+
+    dust_trig = Dust.ar(density=density_hz) * 0.8  # type: ignore[attr-defined]
+    dust_filtered = BPF.ar(source=dust_trig, frequency=resonance_freq, reciprocal_of_q=0.1)  # type: ignore[attr-defined]
+
+    crackle = PinkNoise.ar() * crackle_mix * 0.08  # type: ignore[attr-defined]
+    sig = HPF.ar(source=dust_filtered + crackle, frequency=100.0)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sig, frequency=12000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.02)
+    return {"out": [sig * 1.2, sig * 1.2], "env_follow": env}
+
+
 
 
 

@@ -1,0 +1,22 @@
+{
+  "case_id": "prompt_a_warm",
+  "title": "Warm Organisch Langsam",
+  "descriptors": [
+    "Warm",
+    "organisch",
+    "langsam",
+    "atmend",
+    "gebettete",
+    "Flächen",
+    "weiche",
+    "Resonanzen"
+  ],
+  "mode": "dorian",
+  "solver_score": 8.038847117794486,
+  "lufs_estimated": -16.301280608938193,
+  "peak_dbfs": -7.081534527401092,
+  "active_signal_ratio": 0.8985294117647059,
+  "harmonic_energy_ratio": 0.24935148127934498,
+  "accepted": true,
+  "mix_path": "projects\\baseline\\prompt_a_warm\\mix.wav"
+}

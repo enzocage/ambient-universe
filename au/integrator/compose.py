@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from au.agents.dna_agent import derive_seed_root, generate_dna
+from au.analysis.metrics import MusicalQualityReport, analyze_musical_quality
 from au.arrange.solver import SolveResult, solve
 from au.core.config import Config, get_config
 from au.core.registry import Registry, load_registry
@@ -22,19 +23,18 @@ from au.dsl.blueprint import Blueprint
 from au.dsl.dna import AlbumDNA
 from au.dsl.dramaturgy import DramaturgyArc, generate_arc
 from au.dsl.element import ElementRecipe
-from au.dsl.harmony import ChordTimeline, generate_chord_timeline
+from au.dsl.harmony import (
+    ChordTimeline,
+    generate_structured_chord_timeline,
+)
 from au.dsl.layer import LayerInstance
+from au.dsl.motif import Motif, generate_motif, generate_phrase
 from au.dsl.relations import Relation, RelationSet
 from au.dsl.rhythm import Clock, tempo_from_character
-from au.dsl.section import Section, TrackPlan
+from au.dsl.section import Section, SectionArrangement, TrackPlan, generate_section_arrangement
 from au.integrator.blueprint import derive_blueprint
 from au.integrator.proposals import propose_candidates
 from au.render.track import TrackRenderResult, render_track
-
-from au.analysis.metrics import MusicalQualityReport, analyze_musical_quality
-from au.dsl.harmony import ChordProgression, ChordTimeline, generate_structured_chord_timeline
-from au.dsl.motif import Motif, Phrase, generate_motif, generate_phrase
-from au.dsl.section import Section, SectionArrangement, TrackPlan, generate_section_arrangement
 
 #: Nur diese Relationskinds sind in der Relations-Algebra strukturell pruefbar
 #: (plan.md 7.3, siehe au.dsl.relations); der Rest sind weiche L6-Ziele.

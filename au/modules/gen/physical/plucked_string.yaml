@@ -1,0 +1,59 @@
+id: gen.physical.plucked_string
+version: 1.0.0
+level: 2
+category: generator
+family: physical_modeling
+display_name: "Karplus-Strong Plucked String"
+summary: >
+  Physical Modeling einer gezupften Saite.
+
+guarantees:
+  band_hz: [50.0, 15000.0]
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      damping: {from: 0.1, to: 0.95}
+    default: 0.5
+  body:
+    maps:
+      decay_time: {from: 0.5, to: 8.0}
+    default: 0.4
+  noise_ratio:
+    maps:
+      exciter_noise: {from: 0.0, to: 0.7}
+    default: 0.2
+  motion:
+    maps:
+      lfo_rate: {from: 0.05, to: 1.0}
+    default: 0.1
+  material:
+    maps:
+      damping: {from: 0.2, to: 0.8}
+    default: 0.5
+
+params:
+  damping:
+    min: 0.05
+    max: 0.99
+    default: 0.5
+  decay_time:
+    min: 0.2
+    max: 10.0
+    default: 3.0
+  exciter_noise:
+    min: 0.0
+    max: 1.0
+    default: 0.2
+  lfo_rate:
+    min: 0.01
+    max: 2.0
+    default: 0.1

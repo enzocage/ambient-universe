@@ -244,7 +244,7 @@ def compose(
         result = compose_track(
             prompt, out_dir, duration_s=duration, max_slots=max_slots, cfg=cfg, on_progress=report
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         console.print(f"[red]Fehlgeschlagen: {escape(str(exc))}[/red]")
         raise typer.Exit(code=1) from exc
 

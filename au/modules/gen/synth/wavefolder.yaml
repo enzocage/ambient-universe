@@ -1,0 +1,51 @@
+id: gen.synth.wavefolder
+version: 1.0.0
+level: 2
+category: generator
+family: wavefolding_synthesis
+display_name: "Non-Linear Analog Wavefolder"
+summary: >
+  West-Coast Wavefolding Oszillator mit nichtlinearer Wellenfaltung.
+
+guarantees:
+  band_hz: [30.0, 18000.0]
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      fold_drive: {from: 1.0, to: 6.0}
+    default: 0.4
+  body:
+    maps:
+      sub_octave: {from: 0.0, to: 1.0}
+    default: 0.5
+  noise_ratio:
+    maps:
+      sub_octave: {from: 0.0, to: 0.4}
+    default: 0.1
+  motion:
+    maps:
+      fold_drive: {from: 1.0, to: 4.0}
+    default: 0.2
+  material:
+    maps:
+      fold_drive: {from: 1.0, to: 5.0}
+    default: 0.3
+
+params:
+  fold_drive:
+    min: 0.5
+    max: 8.0
+    default: 2.0
+  sub_octave:
+    min: 0.0
+    max: 1.0
+    default: 0.5

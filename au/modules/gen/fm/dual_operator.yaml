@@ -1,0 +1,63 @@
+id: gen.fm.dual_operator
+version: 1.0.0
+level: 2
+category: generator
+family: fm_synthesis
+display_name: "Dual-Operator FM Resonator"
+summary: >
+  Zwei-Operator Frequenzmodulations-Synthesizer mit dynamischem Modulationsindex.
+
+guarantees:
+  band_hz: [40.0, 16000.0]
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      mod_index: {from: 0.2, to: 8.0}
+    default: 0.4
+  body:
+    maps:
+      sub_mix: {from: 0.0, to: 0.8}
+    default: 0.4
+  noise_ratio:
+    maps:
+      fm_feedback: {from: 0.0, to: 0.6}
+    default: 0.1
+  motion:
+    maps:
+      lfo_rate: {from: 0.02, to: 1.5}
+    default: 0.15
+  material:
+    maps:
+      harmonic_ratio: {from: 1.0, to: 5.0}
+    default: 0.3
+
+params:
+  mod_index:
+    min: 0.1
+    max: 10.0
+    default: 2.0
+  sub_mix:
+    min: 0.0
+    max: 1.0
+    default: 0.4
+  fm_feedback:
+    min: 0.0
+    max: 1.0
+    default: 0.1
+  lfo_rate:
+    min: 0.01
+    max: 2.0
+    default: 0.15
+  harmonic_ratio:
+    min: 1.0
+    max: 8.0
+    default: 2.0

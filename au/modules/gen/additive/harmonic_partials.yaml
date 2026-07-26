@@ -1,0 +1,63 @@
+id: gen.additive.harmonic_partials
+version: 1.0.0
+level: 2
+category: generator
+family: additive_synthesis
+display_name: "Harmonic Partials Additive Synthesizer"
+summary: >
+  Additive Synthese aus Sinus-Teiltoenen mit Schimmer-Detuning.
+
+guarantees:
+  band_hz: [30.0, 18000.0]
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      partial_tilt: {from: -1.0, to: 1.0}
+    default: 0.5
+  body:
+    maps:
+      fundamental_gain: {from: 0.3, to: 1.0}
+    default: 0.8
+  noise_ratio:
+    maps:
+      detune_spread: {from: 0.0, to: 0.08}
+    default: 0.2
+  motion:
+    maps:
+      lfo_rate: {from: 0.05, to: 1.0}
+    default: 0.2
+  material:
+    maps:
+      even_odd_mix: {from: -1.0, to: 1.0}
+    default: 0.5
+
+params:
+  partial_tilt:
+    min: -1.0
+    max: 1.0
+    default: 0.0
+  fundamental_gain:
+    min: 0.1
+    max: 1.0
+    default: 0.8
+  detune_spread:
+    min: 0.0
+    max: 0.1
+    default: 0.015
+  lfo_rate:
+    min: 0.01
+    max: 2.0
+    default: 0.2
+  even_odd_mix:
+    min: -1.0
+    max: 1.0
+    default: 0.0

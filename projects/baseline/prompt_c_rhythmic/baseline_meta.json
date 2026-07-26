@@ -1,0 +1,23 @@
+{
+  "case_id": "prompt_c_rhythmic",
+  "title": "Rhythmisch Sequenziert Elektronisch",
+  "descriptors": [
+    "Rhythmisch",
+    "sequenziert",
+    "elektronisch",
+    "aber",
+    "ambient",
+    "schwebende",
+    "Pulse",
+    "bewegter",
+    "Subbass"
+  ],
+  "mode": "dorian",
+  "solver_score": 8.038847117794486,
+  "lufs_estimated": -16.30762795566402,
+  "peak_dbfs": -6.911645628432856,
+  "active_signal_ratio": 0.8985294117647059,
+  "harmonic_energy_ratio": 0.10612114514769816,
+  "accepted": true,
+  "mix_path": "projects\\baseline\\prompt_c_rhythmic\\mix.wav"
+}

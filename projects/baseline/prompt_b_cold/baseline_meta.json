@@ -1,0 +1,22 @@
+{
+  "case_id": "prompt_b_cold",
+  "title": "Kalt Gläsern Metallisch",
+  "descriptors": [
+    "Kalt",
+    "gläsern",
+    "metallisch",
+    "räumlich",
+    "eisige",
+    "Obertöne",
+    "weite",
+    "Halldistanz"
+  ],
+  "mode": "dorian",
+  "solver_score": 8.038847117794486,
+  "lufs_estimated": -16.292667839361336,
+  "peak_dbfs": -6.583947042406962,
+  "active_signal_ratio": 0.8970588235294118,
+  "harmonic_energy_ratio": 0.40976189549226155,
+  "accepted": true,
+  "mix_path": "projects\\baseline\\prompt_b_cold\\mix.wav"
+}
