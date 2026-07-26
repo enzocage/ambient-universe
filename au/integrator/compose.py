@@ -128,50 +128,50 @@ def compose_track(
             t_dna = build_tone_dna_for_entry(bank_entry, slot.role, root_seed.child("dna", slot.slot_id))
             tone_dnas[slot.slot_id] = t_dna
 
+        # Erzeuge 5 Kandidaten pro Slot (7 Slots x 5 Sub-Sektionen = 35 unterschiedliche Generatoren = ~11% aller 316 Kat-Synths)
         candidates = propose_candidates(
             slot, dna, blueprint.field, reg, seed=root_seed.child("propose", slot.slot_id), n=5
         )
 
-        pattern_kind = "sustained" if slot.role in ("foundation", "harmonic_drone", "moving_pad") else "poisson"
-        cand_idx = (slot_idx + int(root_seed.value)) % len(candidates)
-        chosen = candidates[cand_idx].recipe.model_copy(
-            update={
-                "duration_s": duration_s,
-                "id": f"{slot.slot_id}_elm",
-                "pattern_kind": pattern_kind,
-            }
-        )
-        recipes[chosen.id] = chosen
+        sec_dur = duration_s / 5.0
+        for cand_sub_idx in range(5):
+            sub_id = f"{slot.slot_id}_sec{cand_sub_idx}"
+            cand_idx = (slot_idx + cand_sub_idx + int(root_seed.value)) % len(candidates)
+            pattern_kind = "sustained" if slot.role in ("foundation", "harmonic_drone", "moving_pad") else "poisson"
 
-        layer_id = f"{slot.slot_id}_layer"
-        role_to_layer[slot.role] = layer_id
-
-        evo_plan = generate_evolution_plan(
-            layer_id, duration_s, root_seed.child("evo", layer_id), is_continuous=(pattern_kind == "sustained")
-        )
-        evolution_plans[layer_id] = evo_plan
-
-        # Gated Layer Activity nach Sektionsplan
-        entry_t = 0.0
-        exit_t = duration_s
-        if slot.role in ("subharmonic_pulse", "moving_pad"):
-            entry_t = section_arr.build[0]
-        elif slot.role in ("signal_motif", "resonant_object", "granular_texture", "arpeggiator"):
-            entry_t = section_arr.peak[0]
-            exit_t = section_arr.peak[1]
-
-        layers.append(
-            LayerInstance(
-                layer_id=layer_id,
-                element_id=chosen.id,
-                role=slot.role,
-                band_hz=slot.band_hz,
-                entry_time_s=entry_t,
-                exit_time_s=exit_t,
-                tail_overhang_s=6.0,
-                lufs_target=slot.lufs,
+            chosen = candidates[cand_idx].recipe.model_copy(
+                update={
+                    "duration_s": duration_s,
+                    "id": f"{sub_id}_elm",
+                    "pattern_kind": pattern_kind,
+                }
             )
-        )
+            recipes[chosen.id] = chosen
+
+            layer_id = f"{sub_id}_layer"
+            role_to_layer[slot.role] = layer_id
+
+            evo_plan = generate_evolution_plan(
+                layer_id, duration_s, root_seed.child("evo", layer_id), is_continuous=(pattern_kind == "sustained")
+            )
+            evolution_plans[layer_id] = evo_plan
+
+            entry_t = max(0.0, cand_sub_idx * sec_dur - (1.0 if cand_sub_idx > 0 else 0.0))
+            exit_t = min(duration_s, (cand_sub_idx + 1) * sec_dur + 2.0)
+
+            layers.append(
+                LayerInstance(
+                    layer_id=layer_id,
+                    element_id=chosen.id,
+                    role=slot.role,
+                    band_hz=slot.band_hz,
+                    entry_time_s=entry_t,
+                    exit_time_s=exit_t,
+                    tail_overhang_s=6.0,
+                    lufs_target=slot.lufs - (3.0 if cand_sub_idx > 0 else 0.0),
+                )
+            )
+
 
     relations = []
     for hint in blueprint.relation_hints:
