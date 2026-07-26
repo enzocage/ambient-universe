@@ -1,0 +1,119 @@
+# Ausfuehrbare DSP-Regeln (plan.md Paragraph 2, "Ambient-Wissensbasis").
+#
+# Diese Datei ist kein Text-RAG-Material, sondern wird vom SynthDef-Compiler
+# und vom Grammatikpruefer unmittelbar angewendet. Wer hier einen Wert aendert,
+# aendert den Klang aller Module.
+
+schema_version: "1.0"
+
+# ---------------------------------------------------------------------------
+# Glaettungsprofile
+# ---------------------------------------------------------------------------
+# Jeder von aussen bewegte Parameter bekommt eine Glaettung. Welche, haengt
+# von der Parameterklasse ab: eine Filterfrequenz darf schneller folgen als
+# eine Materialumschaltung, sonst hoert man die Bewegung als Effekt.
+
+smoothing:
+  default_ms: 200.0
+  # Profil "ambient_slow": die Vorgabe des Systems. Bewegung soll wirken,
+  # nicht auffallen.
+  profiles:
+    ambient_slow:
+      frequency: 120.0
+      amplitude: 80.0
+      resonance: 150.0
+      timbre: 250.0
+      material: 800.0
+      spatial: 500.0
+      structural: 1500.0
+    responsive:
+      frequency: 30.0
+      amplitude: 20.0
+      resonance: 40.0
+      timbre: 60.0
+      material: 200.0
+      spatial: 120.0
+      structural: 400.0
+  # Untergrenze. Kuerzere Glaettung erzeugt auf jedem Parameter Artefakte.
+  minimum_ms: 5.0
+
+# ---------------------------------------------------------------------------
+# Sicherheitsgrenzen (L1-Invarianten)
+# ---------------------------------------------------------------------------
+
+safety:
+  peak_ceiling_dbfs: -6.0
+  dc_cutoff_hz: 10.0
+  softclip_ceiling: 0.5
+  softclip_hardness: 0.3
+  # Rueckkopplung: darueber ist keine Stabilitaet mehr beweisbar.
+  max_feedback_damping: 0.98
+  # Nyquist-Reserve. Oberhalb dieses Anteils der Abtastrate darf keine
+  # nennenswerte Energie stehen.
+  nyquist_guard: 0.45
+  aliasing_floor_db: -60.0
+
+# ---------------------------------------------------------------------------
+# Modulationsgrenzen (Ambient-spezifisch)
+# ---------------------------------------------------------------------------
+# Der zentrale Satz aus der Recherche: Alles, was der Hoerer bewusst als
+# "Modulation" erkennt, ist zu schnell. Zielgroesse ist die nicht bemerkte
+# Veraenderung.
+
+modulation:
+  # Obergrenzen je Parameterklasse, in Hertz.
+  max_rate_hz:
+    material: 8.0
+    body: 8.0
+    spatial: 0.5
+    structural: 0.1
+    timbre: 2.0
+    amplitude: 20.0
+  # Typische Bereiche fuer langsame Bewegung.
+  slow_lfo_hz: [0.001, 0.2]
+  drift_hz: [0.0005, 0.05]
+  # Analoge Instabilitaet: Verstimmung in Cent, die nie stoert, aber immer wirkt.
+  analog_drift_cents: [2.0, 12.0]
+
+# ---------------------------------------------------------------------------
+# Huellkurven (L3)
+# ---------------------------------------------------------------------------
+
+envelopes:
+  # Unter diesem Anstieg klickt es, ausser die Geste ist als impulsiv erklaert.
+  min_attack_ms: 80.0
+  impulsive_min_attack_ms: 3.0
+  # Ambient-Ereignisse duerfen sehr lange dauern.
+  max_stage_s: 600.0
+  # Mindestentwicklung: der Spektralschwerpunkt muss sich ueber die Geste
+  # relativ um diesen Betrag verschieben, sonst ist es ein Standbildton.
+  min_spectral_travel: 0.18
+  # Ereignis-zu-Ereignis-Varianz: identische Wiederholung ist verboten.
+  min_event_variance: 0.15
+
+# ---------------------------------------------------------------------------
+# Was nicht zu tun ist (aus beiden Recherchedokumenten)
+# ---------------------------------------------------------------------------
+
+antipatterns:
+  - id: static_drone
+    rule: "Ein Liegeklang ohne Spektralbewegung ueber die Dauer."
+    why: "Ambient traegt seine Dynamik im Timbre, nicht in Lautstaerke oder Rhythmus."
+  - id: unsmoothed_jump
+    rule: "Parametersprung ohne Glaettung."
+    why: "Erzeugt Klicks, die in leiser Musik unverhaeltnismaessig auffallen."
+  - id: harsh_highs
+    rule: "Ungedaempfte Energie ueber 4 kHz in Hallfahnen."
+    why: "Ermuedet in Langform innerhalb weniger Minuten."
+  - id: runaway_feedback
+    rule: "Rueckkopplung ohne DC-Sperre und weiche Begrenzung."
+    why: "Der Arbeitspunkt wandert aus, danach klirrt die Schleife."
+  - id: seedless_random
+    rule: "Zufall ohne Seed."
+    why: "Macht jedes Ergebnis unwiederholbar und damit unbrauchbar fuer ein Album."
+  - id: short_loop
+    rule: "Langform aus kurzen, gleichlangen Schleifen."
+    why: "Die Wiederholung wird hoerbar und zerstoert die Zeitlosigkeit."
+  - id: artist_name_as_spec
+    rule: "Kuenstlernamen als Klangbeschreibung."
+    why: "Uebersetzt sich nicht in Parameter und ist rechtlich heikel."

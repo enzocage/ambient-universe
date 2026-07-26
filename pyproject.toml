@@ -1,0 +1,87 @@
+[project]
+name = "ambient-universe"
+version = "0.1.0"
+description = "KI-gestuetzte Ambient-Kompositionsmaschine mit 10-Level-Master-Integrator"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+dependencies = [
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+    "typer>=0.15",
+    "rich>=13.9",
+    "numpy>=2.0",
+    "soundfile>=0.12",
+    "platformdirs>=4.3",
+]
+
+[project.optional-dependencies]
+# Audio-Backend. Getrennt, damit `au doctor` auch ohne Backend laeuft.
+audio = [
+    "supriya>=25.0",
+]
+# Analyse-Schicht (Phase 3+)
+analysis = [
+    "librosa>=0.11",
+    # numba muss explizit gepinnt werden: der Resolver waehlt sonst 0.53.1,
+    # das weder Python 3.12 noch numpy 2.x unterstuetzt.
+    "numba>=0.61",
+    "pyloudnorm>=0.1.1",
+    "scipy>=1.14",
+]
+# Symbolik-Schicht (Phase 3+)
+symbolic = [
+    "isobar>=0.1.2",
+    "mido>=1.3",
+]
+dev = [
+    "pytest>=8.3",
+    "pytest-timeout>=2.3",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "types-PyYAML",
+]
+
+[project.scripts]
+au = "au.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["au"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer verlangt Funktionsaufrufe (typer.Option/Argument) als Parametervorgaben —
+# genau das, was B008 sonst zu Recht bemaengelt.
+"au/cli.py" = ["B008"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["supriya.*", "librosa.*", "isobar.*", "soundfile.*", "pyloudnorm.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "smoke: schneller Rauchtest ohne Audio-Backend",
+    "audio: benoetigt scsynth",
+    "slow: laeuft laenger als 30s",
+]
+timeout = 300

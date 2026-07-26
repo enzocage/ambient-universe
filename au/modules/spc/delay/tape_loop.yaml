@@ -1,0 +1,72 @@
+id: spc.delay.tape_loop
+version: 1.0.0
+level: 4
+category: space
+family: delay
+display_name: "Bandschleife"
+summary: >
+  Lange Bandverzoegerung mit Gleichlaufschwankung, Saettigung und
+  Hoehenverlust je Umlauf — das Frippertronics-Prinzip. Schichtet Gespieltes
+  zu einem Teppich auf, der sich mit jeder Runde weiter vom Original entfernt.
+
+ports:
+  in:
+    - {name: in, type: audio, required: true}
+    - {name: feedback, type: ctrl}
+  out:
+    - {name: out, type: audio, channels: 2}
+
+params:
+  time_s:
+    min: 0.5
+    max: 30.0
+    default: 8.0
+    unit: s
+    curve: exp
+    smooth_ms: 3000.0
+    summary: "Schleifenlaenge. Aenderungen werden bewusst traege gefahren."
+  feedback:
+    min: 0.0
+    max: 0.97
+    default: 0.72
+    smooth_ms: 800.0
+    summary: "Ueber 0.97 laeuft die Schleife weg."
+  wow_flutter:
+    min: 0.0
+    max: 1.0
+    default: 0.2
+    smooth_ms: 2000.0
+  saturation:
+    min: 0.0
+    max: 1.0
+    default: 0.3
+    smooth_ms: 600.0
+  hf_loss:
+    min: 0.0
+    max: 1.0
+    default: 0.35
+    smooth_ms: 800.0
+    summary: "Hoehenverlust je Umlauf. Laesst alte Schichten nach hinten treten."
+  mix:
+    min: 0.0
+    max: 1.0
+    default: 0.4
+    smooth_ms: 500.0
+
+guarantees:
+  band_hz: [40.0, 12000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 1.8
+  voices_max: 4
+
+tags: [delay, tape, space, warm, degraded, memory]
+semantic_vectors: {warmth: 0.75, brightness: 0.3, organic: 0.8, density: 0.5}
+
+license:
+  backend: supercollider
+  nc_weights: false

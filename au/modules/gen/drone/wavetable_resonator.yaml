@@ -1,0 +1,121 @@
+id: gen.drone.wavetable_resonator
+version: 1.0.0
+level: 2
+category: generator
+family: wavetable
+display_name: "Wavetable-Resonator-Drone"
+summary: >
+  Langsam morphende Wavetable-Quelle durch eine gekoppelte Resonatorbank.
+  Erzeugt schwebende, koerperhafte Liegeklaenge mit metallischem Rest.
+  Traegt als vollstaendige Stimme den kanonischen Makrosatz.
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    # Heller heisst: mehr Teiltoene UND weniger Daempfung. Die zweite
+    # Richtung ist invertiert — genau dafuer gibt es from/to.
+    maps:
+      wt_pos:   {from: 0.05, to: 0.95}
+      res_damp: {from: 0.90, to: 0.30}
+    curve: exp
+    default: 0.4
+  body:
+    maps:
+      res_gain: {from: 0.10, to: 1.00}
+      sub_mix:  {from: 0.00, to: 0.60}
+    curve: lin
+    default: 0.5
+  noise_ratio:
+    maps:
+      noise_mix: {from: 0.0, to: 0.6}
+    curve: exp
+    default: 0.15
+  motion:
+    maps:
+      wt_rate:   {from: 0.002, to: 0.30}
+      drift_amt: {from: 0.000, to: 0.02}
+    curve: log
+    default: 0.25
+  material:
+    maps:
+      res_ratios_set: {from: 0.0, to: 4.0}
+    curve: step
+    default: 0.3
+
+params:
+  wt_pos:
+    min: 0.0
+    max: 1.0
+    default: 0.3
+    smooth_ms: 250.0
+  wt_rate:
+    min: 0.001
+    max: 0.4
+    default: 0.02
+    unit: hz
+    curve: exp
+    smooth_ms: 500.0
+  res_damp:
+    min: 0.05
+    max: 0.99
+    default: 0.7
+    smooth_ms: 120.0
+  res_gain:
+    min: 0.0
+    max: 1.0
+    default: 0.6
+    smooth_ms: 200.0
+  res_ratios_set:
+    enum: [harmonic, glass, metal, wood, imaginary]
+    default: harmonic
+  sub_mix:
+    min: 0.0
+    max: 0.8
+    default: 0.25
+    smooth_ms: 300.0
+  noise_mix:
+    min: 0.0
+    max: 0.6
+    default: 0.1
+    smooth_ms: 300.0
+  drift_amt:
+    min: 0.0
+    max: 0.02
+    default: 0.004
+    smooth_ms: 1000.0
+  unison:
+    min: 1.0
+    max: 8.0
+    default: 3.0
+    curve: step
+    structural: true
+    smooth_ms: 0.0
+
+guarantees:
+  band_hz: [40.0, 6000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 3.2
+  voices_max: 6
+
+tags: [drone, warm, metallic, evolving, wide, foundation-capable]
+semantic_vectors: {warmth: 0.6, brightness: 0.4, organic: 0.5, density: 0.2}
+
+license:
+  backend: supercollider
+  nc_weights: false
+
+compatibility:
+  requires_backend: ["scsynth>=3.13"]
+  recommended_partners: [prc.filter.svf_morph, spc.reverb.fdn32]

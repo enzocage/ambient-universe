@@ -1,0 +1,45 @@
+id: gen.noise.colored
+version: 1.0.0
+level: 1
+category: generator
+family: noise
+display_name: "Gefaerbtes Rauschen"
+summary: >
+  Weisses, rosa, braunes und graues Rauschen aus einer Quelle, stufenlos
+  ueber die spektrale Neigung waehlbar.
+
+ports:
+  out:
+    - {name: out, type: audio}
+
+params:
+  tilt:
+    min: -1.0
+    max: 1.0
+    default: -0.5
+    smooth_ms: 500.0
+    summary: "-1 = braun (tief), 0 = weiss, +1 = blau (hell)."
+  density:
+    min: 0.0
+    max: 1.0
+    default: 1.0
+    smooth_ms: 300.0
+    summary: "1 = dichtes Rauschen, gegen 0 vereinzelte Impulse (Dust)."
+
+guarantees:
+  band_hz: [20.0, 20000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.5
+  voices_max: 32
+
+tags: [noise, texture, foundational, breath]
+semantic_vectors: {warmth: 0.4, brightness: 0.5, organic: 0.6, density: 0.9}
+
+license:
+  backend: supercollider
+  nc_weights: false

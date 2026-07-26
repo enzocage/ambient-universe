@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# AU-Arbeitsverzeichnisse
+.au_cache/
+synthdefs/*.scsyndef
+
+# Renderausgaben — Artefakte werden aus manifest.json rekonstruiert,
+# nicht versioniert. Plaene und Rezepte dagegen schon.
+projects/*/renders/
+projects/*/master/
+elements/*/preview_*.flac
+elements/*/preview_*.wav
+elements/*/versions/*.flac
+elements/*/versions/*.wav
+elements/index.sqlite
+
+# Betriebssystem
+Thumbs.db
+.DS_Store

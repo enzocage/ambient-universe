@@ -1,0 +1,63 @@
+id: prc.filter.svf_morph
+version: 1.0.0
+level: 1
+category: processor
+family: filter
+display_name: "Morphendes State-Variable-Filter"
+summary: >
+  Stufenlos zwischen Tief-, Band- und Hochpass ueberblendbar, mit Resonanz
+  bis in die Selbstoszillation. Die Morphachse ist stetig — ein Sweep
+  erzeugt keinen Sprung.
+
+ports:
+  in:
+    - {name: in, type: audio, required: true}
+    - {name: cutoff, type: ctrl, unit: hz}
+    - {name: resonance, type: ctrl}
+  out:
+    - {name: out, type: audio}
+
+params:
+  cutoff:
+    min: 20.0
+    max: 16000.0
+    default: 1200.0
+    unit: hz
+    curve: exp
+    smooth_ms: 120.0
+    audio_rate_safe: true
+  resonance:
+    min: 0.0
+    max: 0.98
+    default: 0.2
+    smooth_ms: 150.0
+    summary: "Ab etwa 0.9 beginnt die Selbstoszillation."
+  morph:
+    min: 0.0
+    max: 1.0
+    default: 0.0
+    smooth_ms: 200.0
+    summary: "0 = Tiefpass, 0.5 = Bandpass, 1 = Hochpass."
+  keytrack:
+    min: 0.0
+    max: 1.0
+    default: 0.0
+    smooth_ms: 400.0
+
+guarantees:
+  band_hz: [20.0, 20000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.9
+  voices_max: 32
+
+tags: [filter, resonant, morphing, foundational]
+semantic_vectors: {warmth: 0.5, brightness: 0.5, organic: 0.4, density: 0.0}
+
+license:
+  backend: supercollider
+  nc_weights: false

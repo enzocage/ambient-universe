@@ -1,0 +1,62 @@
+id: mod.lfo.slow_sine
+version: 1.0.0
+level: 1
+category: modulator
+family: lfo
+display_name: "Langsamer LFO"
+summary: >
+  Sinus- und verwandte Wellenformen im Bereich von Stunden bis wenigen Hertz.
+  Die untere Grenze liegt bei einer Periode von etwa drei Stunden — schnell
+  genug fuer Bewegung, langsam genug, um nicht als Modulation aufzufallen.
+
+ports:
+  in:
+    - {name: rate, type: ctrl, unit: hz}
+  out:
+    - {name: out, type: ctrl}
+
+params:
+  waveform:
+    enum: [sine, triangle, ramp_up, ramp_down, smooth_random]
+    default: sine
+  rate_hz:
+    min: 0.0001
+    max: 20.0
+    default: 0.02
+    unit: hz
+    curve: exp
+    smooth_ms: 1000.0
+  depth:
+    min: 0.0
+    max: 1.0
+    default: 0.5
+    smooth_ms: 500.0
+  phase:
+    min: 0.0
+    max: 1.0
+    default: 0.0
+    smooth_ms: 0.0
+  bipolar:
+    min: 0.0
+    max: 1.0
+    default: 1.0
+    curve: step
+    smooth_ms: 0.0
+
+guarantees:
+  band_hz: [20.0, 20000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: false
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.15
+  voices_max: 64
+
+tags: [modulator, lfo, slow, motion]
+semantic_vectors: {warmth: 0.5, brightness: 0.5, organic: 0.4, density: 0.0}
+
+license:
+  backend: supercollider
+  nc_weights: false

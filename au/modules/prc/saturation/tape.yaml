@@ -1,0 +1,59 @@
+id: prc.saturation.tape
+version: 1.0.0
+level: 1
+category: processor
+family: saturation
+display_name: "Bandsaettigung"
+summary: >
+  Weiche Kompression und Obertonbildung nach Bandvorbild. Nimmt digitalen
+  Quellen die Sprumpfheit, ohne den Pegel merklich zu heben.
+
+ports:
+  in:
+    - {name: in, type: audio, required: true}
+    - {name: drive, type: ctrl}
+  out:
+    - {name: out, type: audio}
+
+params:
+  drive:
+    min: 0.0
+    max: 1.0
+    default: 0.25
+    curve: exp
+    smooth_ms: 200.0
+  bias:
+    min: -0.5
+    max: 0.5
+    default: 0.0
+    smooth_ms: 400.0
+    summary: "Arbeitspunktverschiebung. Erzeugt geradzahlige Obertoene."
+  hf_rolloff:
+    min: 0.0
+    max: 1.0
+    default: 0.2
+    smooth_ms: 500.0
+  output_trim:
+    min: -12.0
+    max: 6.0
+    default: 0.0
+    unit: db
+    smooth_ms: 300.0
+
+guarantees:
+  band_hz: [20.0, 18000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.6
+  voices_max: 32
+
+tags: [saturation, warm, analog, glue]
+semantic_vectors: {warmth: 0.85, brightness: 0.35, organic: 0.7, density: 0.1}
+
+license:
+  backend: supercollider
+  nc_weights: false

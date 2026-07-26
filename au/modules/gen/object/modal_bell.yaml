@@ -1,0 +1,116 @@
+id: gen.object.modal_bell
+version: 1.0.0
+level: 2
+category: generator
+family: modal
+display_name: "Modaler Glockenkoerper"
+summary: >
+  Modalsynthese eines gestimmten Koerpers zwischen Glas, Metall und Holz.
+  Wird nicht angeschlagen, sondern angeregt — ein leises Rauschfeld am
+  Anregungseingang erzeugt einen Klang, der zu atmen scheint.
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    # Heller = obere Teiltoene lauter (Neigung nach oben) und etwas kuerzer
+    # klingend; ein heller Koerper haelt weniger lange nach.
+    maps:
+      partial_tilt: {from: -0.90, to: 0.60}
+      damp:         {from: 0.980, to: 0.75}
+    curve: exp
+    default: 0.4
+  body:
+    maps:
+      body_gain: {from: 0.05, to: 1.00}
+      partials:  {from: 4.0,  to: 32.0}
+    curve: lin
+    default: 0.35
+  noise_ratio:
+    maps:
+      strike_noise: {from: 0.0, to: 0.5}
+    curve: exp
+    default: 0.2
+  motion:
+    maps:
+      damp_drift:   {from: 0.0, to: 0.05}
+      detune_drift: {from: 0.0, to: 20.0}
+    curve: log
+    default: 0.2
+  material:
+    maps:
+      ratios_set: {from: 0.0, to: 4.0}
+    curve: step
+    default: 0.5
+
+params:
+  ratios_set:
+    enum: [harmonic, glass, metal, wood, imaginary]
+    default: glass
+  partials:
+    min: 4.0
+    max: 32.0
+    default: 12.0
+    curve: step
+    structural: true
+    smooth_ms: 0.0
+  partial_tilt:
+    min: -1.0
+    max: 1.0
+    default: -0.3
+    smooth_ms: 400.0
+    summary: "Neigung der Teiltonamplituden. Negativ = dunkler, hohler."
+  damp:
+    min: 0.1
+    max: 0.999
+    default: 0.9
+    smooth_ms: 300.0
+  body_gain:
+    min: 0.0
+    max: 1.0
+    default: 0.5
+    smooth_ms: 200.0
+  strike_noise:
+    min: 0.0
+    max: 0.5
+    default: 0.08
+    smooth_ms: 250.0
+  damp_drift:
+    min: 0.0
+    max: 0.05
+    default: 0.008
+    smooth_ms: 2000.0
+  detune_drift:
+    min: 0.0
+    max: 20.0
+    default: 3.0
+    unit: cents
+    smooth_ms: 2000.0
+
+guarantees:
+  band_hz: [80.0, 12000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 2.4
+  voices_max: 8
+
+tags: [object, metallic, glass, sparse, resonant, cold]
+semantic_vectors: {warmth: 0.35, brightness: 0.6, organic: 0.7, density: 0.15}
+
+license:
+  backend: supercollider
+  nc_weights: false
+
+compatibility:
+  requires_backend: ["scsynth>=3.13"]
+  recommended_partners: [gen.noise.colored, spc.reverb.infinite_freeze]

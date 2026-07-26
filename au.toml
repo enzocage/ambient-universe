@@ -1,0 +1,32 @@
+# Ambient Universe — Projektkonfiguration
+# Alle Werte haben Vorgaben; diese Datei ueberschreibt nur gezielt.
+
+[audio]
+# Entscheidung E7 aus plan.md: 48 kHz, intern 32-bit float, Export 24-bit.
+sample_rate = 48000
+block_size = 64
+internal_bit_depth = 32
+export_bit_depth = 24
+channels = 2
+
+[render]
+nrt_timeout_s = 600
+max_parallel_jobs = 4
+# Vorhoerdauer und Normalisierungsziel (plan.md Paragraph 9, Etappe 3).
+audition_seconds = 45.0
+audition_lufs_target = -23.0
+
+[paths]
+elements = "elements"
+projects = "projects"
+synthdefs = "synthdefs"
+knowledge = "knowledge"
+modules = "au/modules"
+cache = ".au_cache"
+
+[backend]
+# Leer lassen = automatisch suchen (PATH, dann bekannte Installationsorte).
+# Explizit setzen, wenn mehrere SuperCollider-Versionen installiert sind —
+# ein Versionswechsel bricht die Bit-Reproduzierbarkeit.
+# scsynth = "C:/Program Files/SuperCollider-3.14.1/scsynth.exe"
+# ffmpeg = "C:/Program Files/ffmpeg/bin/ffmpeg.exe"

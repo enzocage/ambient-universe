@@ -1,0 +1,58 @@
+id: gen.osc.bandlimited
+version: 1.0.0
+level: 1
+category: generator
+family: oscillator
+display_name: "Bandbegrenzter Oszillator"
+summary: >
+  Saegezahn, Rechteck, Dreieck und Sinus ohne Aliasing bis dicht unter Nyquist.
+  Das Arbeitspferd der subtraktiven Kette.
+
+ports:
+  in:
+    - {name: frequency, type: ctrl, unit: hz}
+    - {name: phase_mod, type: audio}
+  out:
+    - {name: out, type: audio}
+
+params:
+  waveform:
+    enum: [sine, triangle, saw, square, pulse]
+    default: saw
+  frequency:
+    min: 8.0
+    max: 12000.0
+    default: 110.0
+    unit: hz
+    curve: exp
+    smooth_ms: 30.0
+    audio_rate_safe: true
+  pulse_width:
+    min: 0.05
+    max: 0.95
+    default: 0.5
+    smooth_ms: 80.0
+  detune_cents:
+    min: -50.0
+    max: 50.0
+    default: 0.0
+    unit: cents
+    smooth_ms: 400.0
+
+guarantees:
+  band_hz: [20.0, 18000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.8
+  voices_max: 32
+
+tags: [oscillator, subtractive, foundational]
+semantic_vectors: {warmth: 0.5, brightness: 0.6, organic: 0.3, density: 0.2}
+
+license:
+  backend: supercollider
+  nc_weights: false

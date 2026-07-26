@@ -1,0 +1,43 @@
+id: prc.util.dcblock
+version: 1.0.0
+level: 1
+category: processor
+family: util
+display_name: "DC-Sperre"
+summary: >
+  Entfernt den Gleichanteil. Pflichtbestandteil jeder Rueckkopplungsschleife —
+  ohne ihn wandert der Arbeitspunkt langsam aus dem Aussteuerbereich.
+
+ports:
+  in:
+    - {name: in, type: audio, required: true}
+  out:
+    - {name: out, type: audio}
+
+params:
+  cutoff_hz:
+    min: 1.0
+    max: 40.0
+    default: 10.0
+    unit: hz
+    curve: exp
+    smooth_ms: 200.0
+    summary: "Eckfrequenz der Hochpasssperre."
+
+guarantees:
+  band_hz: [20.0, 20000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.2
+  voices_max: 64
+
+tags: [util, safety, feedback-guard]
+semantic_vectors: {warmth: 0.5, brightness: 0.5, organic: 0.5, density: 0.0}
+
+license:
+  backend: supercollider
+  nc_weights: false

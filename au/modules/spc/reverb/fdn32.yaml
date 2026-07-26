@@ -1,0 +1,72 @@
+id: spc.reverb.fdn32
+version: 1.0.0
+level: 4
+category: space
+family: reverb
+display_name: "Feedback-Delay-Network-Hall (32 Kanaele)"
+summary: >
+  Dichter, modulierter Nachhall aus einem 32-kanaligen Rueckkopplungsnetz.
+  Der Grundraum des Systems: gross genug fuer Ambient, moduliert genug,
+  um nicht metallisch stehenzubleiben.
+
+ports:
+  in:
+    - {name: in, type: audio, required: true}
+    - {name: decay, type: ctrl, unit: s}
+  out:
+    - {name: out, type: audio, channels: 2}
+
+params:
+  decay_s:
+    min: 0.5
+    max: 120.0
+    default: 12.0
+    unit: s
+    curve: exp
+    smooth_ms: 1500.0
+  predelay_ms:
+    min: 0.0
+    max: 250.0
+    default: 40.0
+    unit: ms
+    smooth_ms: 200.0
+  size:
+    min: 0.1
+    max: 1.0
+    default: 0.7
+    smooth_ms: 2000.0
+  damp_hf:
+    min: 0.0
+    max: 1.0
+    default: 0.45
+    smooth_ms: 800.0
+    summary: "Hoehendaempfung je Umlauf. Gegen schrille Hallfahnen."
+  modulation:
+    min: 0.0
+    max: 1.0
+    default: 0.25
+    smooth_ms: 1500.0
+    summary: "Verstimmung der Verzoegerungen. 0 klingt metallisch statisch."
+  mix:
+    min: 0.0
+    max: 1.0
+    default: 0.3
+    smooth_ms: 500.0
+
+guarantees:
+  band_hz: [30.0, 16000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 2.8
+  voices_max: 4
+
+tags: [reverb, space, wide, deep, glue]
+semantic_vectors: {warmth: 0.55, brightness: 0.4, organic: 0.5, density: 0.6}
+
+license:
+  backend: supercollider
+  nc_weights: false

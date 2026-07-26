@@ -1,0 +1,66 @@
+id: prc.resonator.klank_bank
+version: 1.0.0
+level: 1
+category: processor
+family: resonator
+display_name: "Resonatorbank"
+summary: >
+  Eine Bank gestimmter Resonatoren. Aus Rauschen wird damit ein Koerper:
+  Glas, Metall, Holz oder ein Material, das es nicht gibt.
+
+ports:
+  in:
+    - {name: in, type: audio, required: true}
+    - {name: fundamental, type: ctrl, unit: hz}
+  out:
+    - {name: out, type: audio}
+
+params:
+  ratios_set:
+    enum: [harmonic, glass, metal, wood, imaginary]
+    default: glass
+    summary: "Frequenzverhaeltnisse der Teiltoene — bestimmt das Material."
+  fundamental:
+    min: 30.0
+    max: 4000.0
+    default: 220.0
+    unit: hz
+    curve: exp
+    smooth_ms: 250.0
+  partials:
+    min: 3.0
+    max: 24.0
+    default: 8.0
+    curve: step
+    structural: true
+    smooth_ms: 0.0
+  damp:
+    min: 0.05
+    max: 0.995
+    default: 0.7
+    smooth_ms: 300.0
+    summary: "Naeher an 1 = laengeres Ausklingen."
+  spread:
+    min: 0.0
+    max: 1.0
+    default: 0.3
+    smooth_ms: 500.0
+    summary: "Stereoverteilung der Teiltoene."
+
+guarantees:
+  band_hz: [40.0, 12000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 1.6
+  voices_max: 12
+
+tags: [resonator, resonant, metallic, body, material]
+semantic_vectors: {warmth: 0.45, brightness: 0.6, organic: 0.7, density: 0.3}
+
+license:
+  backend: supercollider
+  nc_weights: false

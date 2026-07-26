@@ -1,0 +1,71 @@
+id: mod.map.linear
+version: 1.0.0
+level: 1
+category: modulator
+family: mapper
+display_name: "Lineare Abbildung"
+summary: >
+  Bildet einen Merkmalsstrom auf einen Steuerbereich ab — begrenzt, geglaettet
+  und deklariert. Das einzige Tor, durch das Analyse auf Parameter wirken darf.
+  Ohne dieses Nadeloehr entstehen Rueckkopplungen, die niemand mehr entwirrt.
+
+ports:
+  in:
+    - {name: in, type: analysis, required: true}
+  out:
+    - {name: out, type: ctrl}
+
+params:
+  in_low:
+    min: -120.0
+    max: 20000.0
+    default: 0.0
+    smooth_ms: 0.0
+  in_high:
+    min: -120.0
+    max: 20000.0
+    default: 1.0
+    smooth_ms: 0.0
+  out_low:
+    min: -1.0
+    max: 1.0
+    default: 0.0
+    smooth_ms: 0.0
+  out_high:
+    min: -1.0
+    max: 1.0
+    default: 1.0
+    smooth_ms: 0.0
+  smooth_ms:
+    min: 20.0
+    max: 30000.0
+    default: 500.0
+    unit: ms
+    curve: exp
+    smooth_ms: 0.0
+    summary: "Pflichtglaettung. Unter 20 ms ist keine Abbildung zugelassen."
+  clamp:
+    min: 0.0
+    max: 1.0
+    default: 1.0
+    curve: step
+    smooth_ms: 0.0
+    summary: "1 = Ausgang hart auf [out_low, out_high] begrenzen."
+
+guarantees:
+  band_hz: [20.0, 20000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: false
+  latency_samples: 0
+  deterministic: true
+
+cost:
+  cpu_units: 0.1
+  voices_max: 64
+
+tags: [modulator, mapper, safety, feedback-guard]
+semantic_vectors: {warmth: 0.5, brightness: 0.5, organic: 0.3, density: 0.0}
+
+license:
+  backend: supercollider
+  nc_weights: false

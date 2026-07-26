@@ -1,0 +1,53 @@
+id: ana.spec.centroid_flux
+version: 1.0.0
+level: 1
+category: analysis
+family: spectral
+display_name: "Spektralschwerpunkt und Fluss"
+summary: >
+  Misst Helligkeit (Schwerpunkt) und Veraenderungsrate (Fluss) des Signals.
+  Schliesst den Rueckkopplungskreis der Maschine: L3 belegt damit nach, dass
+  eine Geste sich wirklich entwickelt, statt nur zu klingen.
+
+ports:
+  in:
+    - {name: in, type: audio, required: true}
+  out:
+    - {name: centroid, type: analysis, unit: hz}
+    - {name: flux, type: analysis}
+    - {name: rolloff, type: analysis, unit: hz}
+
+params:
+  fft_size:
+    enum: ["512", "1024", "2048", "4096"]
+    default: "2048"
+  hop_ratio:
+    min: 0.125
+    max: 1.0
+    default: 0.25
+    smooth_ms: 0.0
+  smooth_ms:
+    min: 0.0
+    max: 10000.0
+    default: 250.0
+    unit: ms
+    curve: exp
+    smooth_ms: 0.0
+
+guarantees:
+  band_hz: [20.0, 20000.0]
+  peak_ceiling_dbfs: -6.0
+  dc_free: true
+  latency_samples: 2048
+  deterministic: true
+
+cost:
+  cpu_units: 0.7
+  voices_max: 8
+
+tags: [analysis, spectral, feedback, measurement]
+semantic_vectors: {warmth: 0.5, brightness: 0.5, organic: 0.0, density: 0.0}
+
+license:
+  backend: supercollider
+  nc_weights: false
