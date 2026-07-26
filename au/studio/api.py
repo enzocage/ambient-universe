@@ -26,6 +26,7 @@ _STATIC_DIR = Path(__file__).parent / "static"
 class ComposeRequest(BaseModel):
     prompt: str
     duration_s: float = 90.0
+    complexity: str = "auto"
 
 
 class LayerPreviewRequest(BaseModel):
@@ -38,6 +39,7 @@ def _job_summary(job: Job) -> dict[str, Any]:
         "job_id": job.job_id,
         "prompt": job.prompt,
         "duration_s": job.duration_s,
+        "complexity": job.complexity,
         "status": job.status,
         "log": job.log,
         "error": job.error,
@@ -87,6 +89,14 @@ def _job_summary(job: Job) -> dict[str, Any]:
                 "accepted": r.quality_report.accepted,
                 "summary": r.quality_report.summary(),
                 "reasons": list(r.quality_report.reasons),
+            },
+            "complexity_budget": {
+                "name": r.budget.name,
+                "max_slots": r.budget.max_slots,
+                "variants_per_role": r.budget.variants_per_role,
+                "section_count": r.budget.section_count,
+                "audition_depth": r.budget.audition_depth,
+                "revision_passes": r.budget.revision_passes,
             },
             "harmony": {
                 "mode": r.blueprint.field.mode,
@@ -178,8 +188,9 @@ def index() -> str:
 def compose(req: ComposeRequest) -> dict[str, str]:
     if not req.prompt.strip():
         raise HTTPException(400, "Prompt darf nicht leer sein.")
-    duration = max(20.0, min(300.0, req.duration_s))
-    job = start_job(req.prompt.strip(), duration)
+    duration = max(10.0, min(600.0, req.duration_s))
+    complexity = req.complexity if req.complexity in {"auto", "sketch", "developing", "rich", "album", "maximal"} else "auto"
+    job = start_job(req.prompt.strip(), duration, complexity)
     return {"job_id": job.job_id}
 
 
@@ -349,4 +360,3 @@ def modules() -> list[dict[str, Any]]:
         }
         for m in registry
     ]
-

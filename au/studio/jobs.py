@@ -25,6 +25,7 @@ class Job:
     job_id: str
     prompt: str
     duration_s: float
+    complexity: str = "auto"
     status: JobStatus = "pending"
     log: list[str] = field(default_factory=list)
     result: ComposeResult | None = None
@@ -48,6 +49,7 @@ def _run(job: Job, cfg: Config) -> None:
             job.prompt,
             output_dir,
             duration_s=job.duration_s,
+            complexity=job.complexity,
             cfg=cfg,
             on_progress=job.append,
         )
@@ -59,9 +61,9 @@ def _run(job: Job, cfg: Config) -> None:
         job.append(f"Fehler: {exc}")
 
 
-def start_job(prompt: str, duration_s: float, cfg: Config | None = None) -> Job:
+def start_job(prompt: str, duration_s: float, complexity: str = "auto", cfg: Config | None = None) -> Job:
     c = cfg or get_config()
-    job = Job(job_id=uuid.uuid4().hex[:12], prompt=prompt, duration_s=duration_s)
+    job = Job(job_id=uuid.uuid4().hex[:12], prompt=prompt, duration_s=duration_s, complexity=complexity)
     with _LOCK:
         _JOBS[job.job_id] = job
     thread = threading.Thread(target=_run, args=(job, c), daemon=True)

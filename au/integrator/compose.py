@@ -22,6 +22,7 @@ from au.core.seeds import SeedPath
 from au.dsl.blueprint import Blueprint, RoleSlot
 from au.dsl.dna import AlbumDNA
 from au.dsl.dramaturgy import DramaturgyArc, generate_arc
+from au.dsl.complexity import CompositionBudget, budget_for_duration
 from au.dsl.element import ElementRecipe
 from au.dsl.evolution import EvolutionPlan, generate_evolution_plan
 from au.dsl.harmony import (
@@ -66,6 +67,7 @@ class ComposeResult:
     tone_dnas: dict[str, ToneDNA]
     transformed_motifs: tuple[TransformedMotif, ...]
     hierarchy: HierarchicalScore
+    budget: CompositionBudget
 
 
 
@@ -74,7 +76,8 @@ def compose_track(
     output_dir: Path,
     *,
     duration_s: float = 90.0,
-    max_slots: int = 6,
+    max_slots: int | None = None,
+    complexity: str = "auto",
     seed_root: int | None = None,
     registry: Registry | None = None,
     cfg: Config | None = None,
@@ -84,6 +87,8 @@ def compose_track(
     import soundfile as sf
 
     report = on_progress or (lambda _msg: None)
+    budget = budget_for_duration(duration_s, complexity)
+    report(f"Komplexitaetsbudget: {budget.name} | {budget.variants_per_role} Varianten/Rolle | {budget.section_count} Abschnitte")
     c = cfg or get_config()
     report("Lade Modulkatalog …")
     reg = registry or load_registry(c, strict=True)
@@ -106,12 +111,13 @@ def compose_track(
     )
     available = list(blueprint.role_slots)
     selected: list[RoleSlot] = []
+    slot_limit = budget.max_slots if max_slots is None else min(max_slots, budget.max_slots)
     for role in required_order:
         slot = next((candidate for candidate in available if candidate.role == role), None)
-        if slot is not None and len(selected) < max_slots:
+        if slot is not None and len(selected) < slot_limit:
             selected.append(slot)
             available.remove(slot)
-    selected.extend(available[: max(0, max_slots - len(selected))])
+    selected.extend(available[: max(0, slot_limit - len(selected))])
     slots = tuple(selected)
     report(f"Blueprint: {len(slots)} Rollen-Slots ({', '.join(s.role for s in slots)})")
 
@@ -152,13 +158,14 @@ def compose_track(
             t_dna = build_tone_dna_for_entry(bank_entry, slot.role, root_seed.child("dna", slot.slot_id))
             tone_dnas[slot.slot_id] = t_dna
 
-        # Erzeuge 5 Kandidaten pro Slot (7 Slots x 5 Sub-Sektionen = 35 unterschiedliche Generatoren = ~11% aller 316 Kat-Synths)
+        # Lange Renderbudgets kaufen echte Kandidatensuche und Varianten,
+        # nicht nur eine laengere Version derselben Layerliste.
         candidates = propose_candidates(
-            slot, dna, blueprint.field, reg, seed=root_seed.child("propose", slot.slot_id), n=5
+            slot, dna, blueprint.field, reg, seed=root_seed.child("propose", slot.slot_id), n=budget.variants_per_role
         )
 
-        sec_dur = duration_s / 5.0
-        for cand_sub_idx in range(5):
+        sec_dur = duration_s / max(1, budget.variants_per_role)
+        for cand_sub_idx in range(budget.variants_per_role):
             sub_id = f"{slot.slot_id}_sec{cand_sub_idx}"
             cand_idx = (slot_idx + cand_sub_idx + int(root_seed.value)) % len(candidates)
             # Das Kandidatenrezept legt das Pattern fest. Ein pauschales
@@ -271,4 +278,5 @@ def compose_track(
         tone_dnas=tone_dnas,
         transformed_motifs=transformed_motifs,
         hierarchy=hierarchy,
+        budget=budget,
     )

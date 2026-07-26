@@ -236,8 +236,20 @@
       <div class="presets" id="presetList"></div>
       <div class="row">
         <div>
-          <label for="duration">Dauer (Sekunden)</label>
-          <input type="number" id="duration" value="60" min="20" max="300" step="10" />
+          <label for="duration">Render-/Kompositionsbudget (10 s – 10 min)</label>
+          <input type="number" id="duration" value="60" min="10" max="600" step="10" />
+          <small style="color:var(--muted)">Längere Modi suchen mehr Rollen, Varianten, Formabschnitte und Klangkonstellationen.</small>
+        </div>
+        <div>
+          <label for="complexity">Komplexitätsmodus</label>
+          <select id="complexity">
+            <option value="auto">Automatisch aus Dauer</option>
+            <option value="sketch">Skizze – schnell</option>
+            <option value="developing">Entwicklung</option>
+            <option value="rich">Reich</option>
+            <option value="album">Albumproduktion</option>
+            <option value="maximal">Maximal – langsam</option>
+          </select>
         </div>
         <button id="composeBtn">Komponieren</button>
       </div>
@@ -482,6 +494,7 @@ el("composeBtn").addEventListener("click", async () => {
   const prompt = el("prompt").value.trim();
   if (!prompt) { el("prompt").focus(); return; }
   const duration_s = parseFloat(el("duration").value) || 60;
+  const complexity = el("complexity").value;
   el("composeBtn").disabled = true;
   el("log").textContent = "Sende Auftrag …";
   setStatus("running", "Wird gestartet …");
@@ -490,7 +503,7 @@ el("composeBtn").addEventListener("click", async () => {
     const res = await fetch(API + "/api/compose", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, duration_s }),
+      body: JSON.stringify({ prompt, duration_s, complexity }),
     });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
