@@ -5,6 +5,7 @@ orchestriert von einem **Master-Integrator über 10 hierarchische Organisationsl
 von der Klangerzeugung auf Sampleebene bis zum fertigen, gemasterten Album.
 
 > Architektur, Organisationsdefinitionen und Stufenplan: **[plan.md](plan.md)**
+> Übergabebericht (Ist-Zustand, Kernentscheidungen, gefundene Bugs, nächste Schritte): **[HANDOFF.md](HANDOFF.md)**
 
 ![Ambient Universe Studio: Prompt, Album-DNA, Blueprint-Rollen-Slots, Solver-Status und Waveform-Player für Mix und Stems](gfx/s2.png)
 
