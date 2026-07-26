@@ -18,6 +18,7 @@ from au.dsl.dna import AlbumDNA
 from au.dsl.element import ElementRecipe
 from au.dsl.field import HarmonicField
 from au.selection.sound_priority import prioritize_voice_modules
+from au.presets import get_preset_catalog
 
 #: Grobe Thesen, mit denen ein Kandidat sich von den anderen unterscheidet.
 _THESES: tuple[tuple[str, float, float], ...] = (
@@ -128,6 +129,7 @@ def propose_candidates(
         thesis, brightness, density_shift = _THESES[i % len(_THESES)]
         voice = voices[i % len(voices)]
         candidate_seed = seed.element_candidate(slot.slot_id, i)
+        preset = get_preset_catalog().select(candidate_seed.value, slot.role)
         duration_s = max(20.0, min(180.0, slot.phase_period_s * 1.5))
 
         overrides: dict[str, object] = {}
@@ -159,12 +161,13 @@ def propose_candidates(
             id=f"cand_{slot.slot_id}_{i}",
             name=f"{slot.role} — {thesis}",
             voice_module_id=voice,
-            voice_macros={"brightness": brightness},
+            voice_macros={**preset.macros, "brightness": brightness},
+            voice_params=preset.parameters,
             field=field,
             duration_s=duration_s,
             seed_root=int(candidate_seed.value & 0xFFFF_FFFF),
             tags=(slot.role,),
-            thesis=thesis,
+            thesis=f"{thesis} | preset={preset.id}",
             **overrides,
         )
         out.append(Candidate(recipe=recipe, thesis=thesis))
