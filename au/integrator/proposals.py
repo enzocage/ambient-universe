@@ -19,6 +19,8 @@ from au.dsl.element import ElementRecipe
 from au.dsl.field import HarmonicField
 from au.selection.sound_priority import prioritize_voice_modules
 from au.presets import get_preset_catalog
+from au.core.config import get_config
+from au.learning.rating import RatingStore
 
 #: Grobe Thesen, mit denen ein Kandidat sich von den anderen unterscheidet.
 _THESES: tuple[tuple[str, float, float], ...] = (
@@ -129,7 +131,13 @@ def propose_candidates(
         thesis, brightness, density_shift = _THESES[i % len(_THESES)]
         voice = voices[i % len(voices)]
         candidate_seed = seed.element_candidate(slot.slot_id, i)
-        preset = get_preset_catalog().select(candidate_seed.value, slot.role)
+        rating_store = RatingStore(get_config().cache_dir / "learning" / "preset_ratings.json")
+        rating_map = {
+            preset_id: mean
+            for preset_id in {p.id for p in get_preset_catalog().for_role(slot.role)}
+            if (mean := rating_store.mean_for(preset_id, role=slot.role)) is not None
+        }
+        preset = get_preset_catalog().select(candidate_seed.value, slot.role, ratings=rating_map)
         duration_s = max(20.0, min(180.0, slot.phase_period_s * 1.5))
 
         overrides: dict[str, object] = {}

@@ -95,8 +95,13 @@ class PresetCatalog:
         found = tuple(p for p in self.presets if role in p.roles)
         return found if limit is None else found[:limit]
 
-    def select(self, seed: int, role: str) -> ParameterPreset:
+    def select(self, seed: int, role: str, ratings: dict[str, float] | None = None) -> ParameterPreset:
         options = self.for_role(role) or self.presets
+        if ratings:
+            # Persönlicher Geschmack wirkt als weiches Signal: nur bereits
+            # bewertete Presets werden vorgezogen, gleich gute bleiben seed-
+            # stabil divers, damit der Komponist nicht in einem Klang festhängt.
+            options = tuple(sorted(options, key=lambda p: (-ratings.get(p.id, 0.0), p.id)))
         return options[seed % len(options)]
 
 
