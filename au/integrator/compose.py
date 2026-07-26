@@ -205,7 +205,9 @@ def compose_track(
                     entry_time_s=entry_t,
                     exit_time_s=exit_t,
                     tail_overhang_s=6.0,
-                    lufs_target=slot.lufs - (3.0 if cand_sub_idx > 0 else 0.0),
+                    lufs_target=slot.lufs - (6.0 if cand_sub_idx > 0 else 2.5),
+
+
                 )
             )
 

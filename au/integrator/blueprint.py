@@ -47,12 +47,10 @@ def _wanted_roles(dna: AlbumDNA) -> list[str]:
     # Rhythmische DNA bekommt eigene musikalische Stimmen. Diese Rollen muessen
     # bereits im Blueprint existieren; eine spaetere Katalogauswahl kann keinen
     # Rhythmus erzeugen, wenn nur Flaechen-Slots geplant wurden.
-    if c.event_density_mean >= 0.18:
-        roles.extend(("bass_sequence", "arpeggiator"))
-    if c.event_density_mean >= 0.28:
-        roles.append("subtle_percussive_background")
+    roles.extend(("bass_sequence", "arpeggiator", "subtle_percussive_background"))
 
     if c.event_density_mean >= 0.08:
+
         roles.append("granular_texture")
     if c.spatial_width >= 0.5:
         roles.append("moving_pad")

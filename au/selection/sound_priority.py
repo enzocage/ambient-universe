@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from au.core.manifest import ModuleManifest
+from au.modules.base import has_implementation
+
 
 
 class PriorityTier(StrEnum):
@@ -70,7 +72,8 @@ def score_voice_module(
     """
     role_fit = 1.0 if role in module.suggested_roles else 0.18
     band_fit = _overlap_score(module, band_hz)
-    technical = 1.0 if module.has_impl and module.is_renderable else 0.0
+    technical = 1.0 if has_implementation(module.id) else 0.0
+
     raw = 0.48 * role_fit + 0.34 * band_fit + 0.18 * technical + novelty_bonus
     score = max(0.0, min(1.0, raw))
     tier = _tier(score)

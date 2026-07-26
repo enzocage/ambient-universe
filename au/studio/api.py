@@ -213,7 +213,8 @@ def presets(role: str | None = None, limit: int = 48) -> dict[str, Any]:
     """Preset-Labor: neue Beispiele zuerst, bereits Gezeigtes bleibt sichtbar."""
     catalog = get_preset_catalog()
     items = catalog.for_role(role, limit=None) if role else catalog.presets
-    result = []
+    result: list[dict[str, Any]] = []
+
     for preset in items:
         if len(result) >= max(1, min(200, limit)):
             break

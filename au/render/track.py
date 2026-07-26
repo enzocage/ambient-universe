@@ -147,12 +147,12 @@ def render_track(
         stem_paths[bucket] = path
         mix += buffer
 
-    # Target Loudness Normalization (ca. -16 LUFS / RMS ~ 0.11)
     current_rms = float(np.sqrt(np.mean(np.square(mix))))
     if current_rms > 1e-6:
-        target_rms = 0.11
-        gain = min(3.5, max(0.5, target_rms / current_rms))
+        target_rms = 0.11  # entspricht -16.1 LUFS
+        gain = target_rms / current_rms
         mix = mix * gain
+
 
     # Master Soft Limiter (-1 dBFS Ceiling)
     ceiling = 0.89

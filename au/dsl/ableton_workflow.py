@@ -67,7 +67,8 @@ class ProductionWorkflow(BaseModel):
     resamples: tuple[ResamplePass, ...]
     render_budget_name: str
 
-    def validate(self) -> tuple[str, ...]:
+    def validate_workflow(self) -> tuple[str, ...]:
+
         errors: list[str] = []
         rack_ids = {rack.rack_id for rack in self.racks}
         for scene in self.scenes:
@@ -90,12 +91,13 @@ class ProductionWorkflow(BaseModel):
         return tuple(errors)
 
     def validate_budget(self, *, expected_scenes: int, expected_roles: int) -> tuple[str, ...]:
-        errors = list(self.validate())
+        errors = list(self.validate_workflow())
         if len(self.scenes) != expected_scenes:
             errors.append(f"Budget verlangt {expected_scenes} Szenen, erzeugt wurden {len(self.scenes)}")
         if len(self.racks) != expected_roles:
             errors.append(f"Budget verlangt {expected_roles} Racks, erzeugt wurden {len(self.racks)}")
         return tuple(errors)
+
 
 
 def build_production_workflow(
@@ -177,7 +179,8 @@ def build_production_workflow(
         ),
         render_budget_name=budget_name,
     )
-    errors = workflow.validate()
+    errors = workflow.validate_workflow()
     if errors:
         raise ValueError("Ungueltiger Produktionsworkflow: " + "; ".join(errors))
     return workflow
+
