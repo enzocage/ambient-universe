@@ -13,17 +13,20 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from au.agents.dna_agent import derive_seed_root, generate_dna
+from au.arrange.solver import SolveResult, solve
 from au.core.config import Config, get_config
 from au.core.registry import Registry, load_registry
 from au.core.seeds import SeedPath
 from au.dsl.blueprint import Blueprint
 from au.dsl.dna import AlbumDNA
+from au.dsl.dramaturgy import DramaturgyArc, generate_arc
 from au.dsl.element import ElementRecipe
+from au.dsl.harmony import ChordTimeline, generate_chord_timeline
 from au.dsl.layer import LayerInstance
 from au.dsl.relations import Relation, RelationSet
+from au.dsl.rhythm import Clock, tempo_from_character
 from au.dsl.section import Section, TrackPlan
-from au.agents.dna_agent import derive_seed_root, generate_dna
-from au.arrange.solver import SolveResult, solve
 from au.integrator.blueprint import derive_blueprint
 from au.integrator.proposals import propose_candidates
 from au.render.track import TrackRenderResult, render_track
@@ -41,6 +44,9 @@ class ComposeResult:
     solve_result: SolveResult
     track: TrackRenderResult
     open_questions: list[str]
+    chords: ChordTimeline
+    clock: Clock
+    dramaturgy: DramaturgyArc
 
 
 def compose_track(
@@ -128,9 +134,31 @@ def compose_track(
         layers=result.layers,
     )
 
+    # Harmonik-, Rhythmus- und Dramaturgie-Engine: eine geteilte Akkordfolge,
+    # ein geteiltes Zeitraster und ein Gesamtbogen fuer alle Layer -- die
+    # album-/trackweite Konsistenz, die unabhaengige Poisson-Ziehungen pro
+    # Element allein nicht herstellen koennen.
+    report("Erzeuge Akkordfolge, Zeitraster und Dramaturgie-Bogen …")
+    chords = generate_chord_timeline(duration_s, blueprint.field, seed=root_seed.child("harmony"))
+    tempo = tempo_from_character(
+        dna.character.event_density_mean, dna.character.emotional_temperature[1]
+    )
+    clock = Clock(bpm=tempo)
+    dramaturgy = generate_arc(duration_s, seed=root_seed.child("dramaturgy"))
+
     output_dir.mkdir(parents=True, exist_ok=True)
     report("Rendere Track (Layer, Stems, Mix) …")
-    track = render_track(plan, recipes, reg, output_dir, seed=root_seed.track(0), cfg=c)
+    track = render_track(
+        plan,
+        recipes,
+        reg,
+        output_dir,
+        seed=root_seed.track(0),
+        cfg=c,
+        chords=chords,
+        clock=clock,
+        dramaturgy=dramaturgy,
+    )
     report(f"Fertig: {track.mix_path.name} ({track.duration_s:.0f}s)")
 
     return ComposeResult(
@@ -140,4 +168,7 @@ def compose_track(
         solve_result=result,
         track=track,
         open_questions=draft.open_questions,
+        chords=chords,
+        clock=clock,
+        dramaturgy=dramaturgy,
     )

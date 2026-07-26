@@ -41,7 +41,7 @@ def test_compose_track_produces_audible_output(tmp_path: Path) -> None:
     assert progress, "on_progress sollte Fortschrittsmeldungen liefern"
     assert result.track.mix_path.is_file()
 
-    data, sr = sf.read(str(result.track.mix_path), dtype="float64", always_2d=True)
+    data, _sr = sf.read(str(result.track.mix_path), dtype="float64", always_2d=True)
     peak = float(np.max(np.abs(data)))
     assert 0.01 < peak < 0.95, f"Mix ist stumm oder übersteuert (peak={peak})"
     assert len(result.recipes) == 3

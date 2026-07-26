@@ -10,7 +10,7 @@ unabhaengig.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from au.core.config import Config, get_config
 from au.core.graph import Edge, Node, PatchGraph
@@ -25,6 +25,8 @@ if TYPE_CHECKING:  # pragma: no cover
     import supriya
 
     from au.core.registry import Registry
+    from au.dsl.harmony import ChordTimeline
+    from au.dsl.rhythm import Clock
 
 
 def _element_graph(voice_module_id: str) -> PatchGraph:
@@ -40,15 +42,30 @@ def _element_graph(voice_module_id: str) -> PatchGraph:
     )
 
 
-def generate_events(recipe: ElementRecipe, seed: SeedPath) -> list[NoteEvent]:
+def generate_events(
+    recipe: ElementRecipe,
+    seed: SeedPath,
+    *,
+    chords: ChordTimeline | None = None,
+    clock: Clock | None = None,
+) -> list[NoteEvent]:
+    """Erzeugt die Ereignisse eines Rezepts.
+
+    ``chords``/``clock`` sind Trackkontext, kein Bestandteil des Rezepts
+    selbst (ein Element bleibt dadurch eigenstaendig transponierbar und
+    wiederverwendbar, plan.md 4.4) -- ``compose_track`` reicht sie ein, wenn
+    eine geteilte Harmonik-/Rhythmus-Engine fuer den Track existiert.
+    """
     if recipe.pattern_kind == "sustained":
-        return sustained_events(recipe.duration_s, field=recipe.field, seed=seed)
+        return sustained_events(recipe.duration_s, field=recipe.field, seed=seed, chords=chords)
     if recipe.pattern_kind == "poisson":
         return poisson_density_events(
             recipe.duration_s,
             lambda_per_min=recipe.lambda_per_min,
             field=recipe.field,
             seed=seed,
+            chords=chords,
+            clock=clock,
         )
     return euclid_sparse_events(
         recipe.duration_s,
@@ -57,6 +74,8 @@ def generate_events(recipe: ElementRecipe, seed: SeedPath) -> list[NoteEvent]:
         step_duration_s=recipe.euclid_step_s,
         field=recipe.field,
         seed=seed,
+        chords=chords,
+        clock=clock,
     )
 
 
@@ -67,12 +86,20 @@ def build_element_score(
     recipe: ElementRecipe,
     *,
     tail_s: float = 8.0,
+    intensity_curve: list[tuple[float, float]] | None = None,
+    intensity_depth: float = 0.35,
 ) -> supriya.Score:
     """Baut den Score: ein Synth pro Ereignis, jeweils eigene Huellkurve.
 
     ``tail_s`` haengt der Renderdauer an, damit Nachhall/Ausklang des letzten
     Ereignisses nicht abgeschnitten wird — genau die "Nachhall vergessen"-
     Falle, vor der plan.md (MI-L5-Direktive) ausdruecklich warnt.
+
+    ``intensity_curve``: (Zeit, Intensitaet 0..1)-Punkte des Dramaturgie-
+    Organizers (au.dsl.dramaturgy). Wenn gesetzt, wird an jedem Punkt das
+    Makro ``recipe.macro`` auf allen zu diesem Zeitpunkt aktiven Synths
+    proportional zur Intensitaet angehoben (``intensity_depth`` begrenzt den
+    Hub, damit der Bogen fuehlbar bleibt, ohne das Klangbild zu sprengen).
     """
     import supriya
 
@@ -86,6 +113,9 @@ def build_element_score(
     # Die Rueckrechnung geschieht hier, nicht im Modul, damit das Modul ein
     # gewoehnliches Makro bleibt und keine Sonderrolle braucht.
     pitch_control = "pitch_level"
+    base_macro = controls.get(macro_control, 0.5)
+
+    active_synths: list[tuple[NoteEvent, Any]] = []
 
     for event in events:
         pitch = event.pitch_midi(recipe.field)
@@ -97,7 +127,7 @@ def build_element_score(
         values = dict(controls)
         values[pitch_control] = pitch_fraction
         values["amplitude"] = 0.0
-        values[macro_control] = min(1.0, controls.get(macro_control, 0.5) + 0.1 * event.velocity)
+        values[macro_control] = min(1.0, base_macro + 0.1 * event.velocity)
 
         with score.at(event.time_s):
             synth = score.add_synth(compiled, **values)  # type: ignore[arg-type]
@@ -107,6 +137,15 @@ def build_element_score(
             synth.set(amplitude=event.velocity)
         with score.at(event.time_s + event.duration_s):
             synth.set(amplitude=0.0)
+        active_synths.append((event, synth))
+
+    if intensity_curve:
+        for t, intensity in intensity_curve:
+            target = max(0.0, min(1.0, base_macro + (intensity - 0.5) * 2.0 * intensity_depth))
+            for event, synth in active_synths:
+                if event.time_s <= t <= event.time_s + event.duration_s:
+                    with score.at(t):
+                        synth.set(**{macro_control: target})
 
     end = recipe.duration_s + tail_s
     with score.at(end):
@@ -122,6 +161,9 @@ def render_element(
     seed: SeedPath,
     cfg: Config | None = None,
     tail_s: float = 8.0,
+    chords: ChordTimeline | None = None,
+    clock: Clock | None = None,
+    intensity_curve: list[tuple[float, float]] | None = None,
 ) -> tuple[RenderResult, list[NoteEvent]]:
     """Rendert ein Element solo in eine Audiodatei."""
     c = cfg or get_config()
@@ -134,8 +176,10 @@ def render_element(
         if control_name in controls:
             controls[control_name] = max(0.0, min(1.0, value))
 
-    events = generate_events(recipe, seed)
-    score = build_element_score(compiled.synthdef, controls, events, recipe, tail_s=tail_s)
+    events = generate_events(recipe, seed, chords=chords, clock=clock)
+    score = build_element_score(
+        compiled.synthdef, controls, events, recipe, tail_s=tail_s, intensity_curve=intensity_curve
+    )
     duration = recipe.duration_s + tail_s
     result = render_score(score, output_path, duration=duration, cfg=c)
     return result, events

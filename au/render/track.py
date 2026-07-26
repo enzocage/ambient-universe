@@ -25,6 +25,26 @@ from au.render.element import render_element
 
 if TYPE_CHECKING:  # pragma: no cover
     from au.core.registry import Registry
+    from au.dsl.dramaturgy import DramaturgyArc
+    from au.dsl.harmony import ChordTimeline
+    from au.dsl.rhythm import Clock
+
+#: Rollen, deren Makro-Grundstellung der Dramaturgie-Bogen modulieren darf.
+#: Beschraenkt auf die Schichten, die den Track TRAGEN (plan.md
+#: _CONTINUOUS_ROLES in au.integrator.proposals) -- ein Bogen auf einem
+#: seltenen Einzelereignis (resonant_object) haette kaum Wirkung, weil das
+#: Ereignis meist laengst vorbei ist, wenn sich die Intensitaet aendert.
+_DRAMATURGY_ROLES: frozenset[str] = frozenset(
+    {
+        "foundation",
+        "harmonic_drone",
+        "moving_pad",
+        "atmospheric_noise",
+        "space_noise_elements",
+        "harmonic_sphere",
+        "subharmonic_pulse",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,12 +64,20 @@ def render_track(
     seed: SeedPath,
     tail_s: float = 8.0,
     cfg: Config | None = None,
+    chords: ChordTimeline | None = None,
+    clock: Clock | None = None,
+    dramaturgy: DramaturgyArc | None = None,
 ) -> TrackRenderResult:
     """Rendert einen vollstaendigen Track aus geloesten Layern.
 
     Args:
         recipes: Element-ID -> Rezept. Jedes in ``plan.layers`` referenzierte
             ``element_id`` muss hier vorkommen.
+        chords: geteilte Akkordfolge (au.dsl.harmony) -- alle Layer, deren
+            Muster eine Stufe braucht, ziehen aus demselben aktiven Akkord.
+        clock: geteiltes Zeitraster (au.dsl.rhythm) fuer Ereigniszeitpunkte.
+        dramaturgy: der Gesamtbogen (au.dsl.dramaturgy), moduliert die
+            Makro-Grundstellung der tragenden Schichten ueber die Trackdauer.
 
     Raises:
         KeyError: Wenn ein Layer kein passendes Rezept findet.
@@ -75,7 +103,27 @@ def render_track(
 
         layer_seed = seed.layer(plan.layers.index(layer), layer.element_id)
         layer_path = output_dir / f"_layer_{layer.layer_id}.wav"
-        render_element(recipe, registry, layer_path, seed=layer_seed, tail_s=tail_s)
+
+        intensity_curve = None
+        if dramaturgy is not None and layer.role in _DRAMATURGY_ROLES:
+            # Nur innerhalb der Layerdauer sampeln -- der Bogen selbst deckt
+            # die volle Trackdauer ab (inklusive Schweif anderer Layer).
+            n_points = max(4, int(layer.duration_s / 4.0))
+            intensity_curve = [
+                (t, dramaturgy.intensity_at(t))
+                for t in np.linspace(0.0, layer.duration_s, n_points)
+            ]
+
+        render_element(
+            recipe,
+            registry,
+            layer_path,
+            seed=layer_seed,
+            tail_s=tail_s,
+            chords=chords,
+            clock=clock,
+            intensity_curve=intensity_curve,
+        )
 
         data, sr = sf.read(str(layer_path), dtype="float64", always_2d=True)
         if sr != sample_rate:

@@ -9,9 +9,8 @@ mit dem jeweiligen Phasenausbau (9 und 10); hier steht, was Phase 6
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from au.dsl.dna import AlbumDNA
 from au.dsl.field import HarmonicField
 
 
