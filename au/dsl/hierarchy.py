@@ -12,6 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from au.dsl.escalation import EscalationGraph, build_escalation_graph
+from au.dsl.pattern_grammar import PatternLevel, patterns_for_context
 
 HierarchyLevel = Literal["gesture", "event", "motif", "phrase", "section", "form"]
 
@@ -75,6 +76,15 @@ class HierarchicalScore(BaseModel):
     phrases: tuple[PhrasePlan, ...]
     refs: tuple[HierarchyRef, ...] = ()
     escalation: EscalationGraph | None = None
+
+    def patterns_for_section(self, section_id: str) -> tuple[str, ...]:
+        section = next(section for section in self.form.sections if section.section_id == section_id)
+        patterns = patterns_for_context(
+            level=PatternLevel.SECTION,
+            section=section.name,
+            roles=section.active_roles,
+        )
+        return tuple(pattern.pattern_id for pattern in patterns)
 
     def section_for(self, time_s: float) -> SectionPlan:
         for section in self.form.sections:
