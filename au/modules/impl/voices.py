@@ -895,6 +895,362 @@ def build_random_walk_seq(ctx: BuildContext) -> Signals:
     return {"out": [sig, sig], "env_follow": env}
 
 
+# ---------------------------------------------------------------------------
+# 28 Weitere L2 Synthesizer-Familien (2. 10-fach Erweiterung)
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.chaos.lorenz_attractor")
+def build_lorenz_attractor(ctx: BuildContext) -> Signals:
+    from supriya.ugens import BPF, LPF, LFNoise2, PinkNoise
+    mod = LFNoise2.kr(frequency=0.2) * 800.0 + 1200.0  # type: ignore[attr-defined]
+    noise = PinkNoise.ar() * 0.4  # type: ignore[attr-defined]
+    sig = BPF.ar(source=noise, frequency=mod, reciprocal_of_q=0.08)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig * 1.5, sig * 1.5], "env_follow": env}
+
+
+@implements("gen.chaos.rossler_chaos")
+def build_rossler_chaos(ctx: BuildContext) -> Signals:
+    from supriya.ugens import BPF, LFNoise1, SinOsc
+    pitch = ctx.input("pitch", 45.0)
+    freq = _midi_to_hz(pitch)
+    chaos_mod = LFNoise1.kr(frequency=0.5) * freq * 0.5  # type: ignore[attr-defined]
+    sig = SinOsc.ar(frequency=freq + chaos_mod) * 0.35  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.chaos.logistic_map")
+def build_logistic_map(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, Dust, SinOsc
+    trig = Dust.ar(density=8.0)  # type: ignore[attr-defined]
+    sig = SinOsc.ar(frequency=800.0) * trig * 0.35  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.02)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.chaos.chua_circuit")
+def build_chua_circuit(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, Fold, LFNoise1, SinOsc
+    pitch = ctx.input("pitch", 40.0)
+    freq = _midi_to_hz(pitch)
+    drive = LFNoise1.kr(frequency=0.1) * 3.0 + 3.0  # type: ignore[attr-defined]
+    core = SinOsc.ar(frequency=freq) * drive  # type: ignore[attr-defined]
+    sig = Fold.ar(source=core, minimum=-0.8, maximum=0.8) * 0.35  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sig, frequency=4000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.synth.tb303_acid_bass")
+def build_tb303_acid_bass(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise2, Pulse, Saw
+    pitch = ctx.input("pitch", 36.0)
+    freq = _midi_to_hz(pitch)
+    saw = Saw.ar(frequency=freq) * 0.4  # type: ignore[attr-defined]
+    cutoff_mod = LFNoise2.kr(frequency=0.4) * 1200.0 + 400.0  # type: ignore[attr-defined]
+    sig = LPF.ar(source=saw, frequency=cutoff_mod)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.03)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.synth.minimoog_sub")
+def build_minimoog_sub(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, Pulse, Saw, SinOsc
+    pitch = ctx.input("pitch", 34.0)
+    freq = _midi_to_hz(pitch)
+    osc1 = Saw.ar(frequency=freq) * 0.35  # type: ignore[attr-defined]
+    osc2 = Pulse.ar(frequency=freq * 1.002, width=0.4) * 0.35  # type: ignore[attr-defined]
+    sub = SinOsc.ar(frequency=freq * 0.5) * 0.4  # type: ignore[attr-defined]
+    sig = LPF.ar(source=osc1 + osc2 + sub, frequency=600.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.synth.oberheim_sem_pad")
+def build_oberheim_sem_pad(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise1, Pulse, Saw
+    pitch = ctx.input("pitch", 55.0)
+    freq = _midi_to_hz(pitch)
+    saw = Saw.ar(frequency=freq) * 0.35  # type: ignore[attr-defined]
+    pulse = Pulse.ar(frequency=freq * 0.999, width=0.5) * 0.35  # type: ignore[attr-defined]
+    cutoff = LFNoise1.kr(frequency=0.1) * 2000.0 + 2500.0  # type: ignore[attr-defined]
+    sig = LPF.ar(source=saw + pulse, frequency=cutoff)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.synth.ms20_ring_mod")
+def build_ms20_ring_mod(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, Pulse, Saw
+    pitch = ctx.input("pitch", 50.0)
+    freq = _midi_to_hz(pitch)
+    car = Saw.ar(frequency=freq)  # type: ignore[attr-defined]
+    mod = Pulse.ar(frequency=freq * 1.5, width=0.5)  # type: ignore[attr-defined]
+    ring = car * mod * 0.35
+    sig = LPF.ar(source=ring, frequency=4500.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.fm.six_operator_pad")
+def build_six_operator_pad(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, SinOsc
+    pitch = ctx.input("pitch", 57.0)
+    freq = _midi_to_hz(pitch)
+    op6 = SinOsc.ar(frequency=freq * 6.0) * freq * 1.0  # type: ignore[attr-defined]
+    op5 = SinOsc.ar(frequency=freq * 5.0 + op6) * freq * 0.8  # type: ignore[attr-defined]
+    op4 = SinOsc.ar(frequency=freq * 4.0 + op5) * freq * 0.6  # type: ignore[attr-defined]
+    op3 = SinOsc.ar(frequency=freq * 3.0 + op4) * freq * 0.4  # type: ignore[attr-defined]
+    op2 = SinOsc.ar(frequency=freq * 2.0 + op3) * freq * 0.2  # type: ignore[attr-defined]
+    op1 = SinOsc.ar(frequency=freq + op2) * 0.35  # type: ignore[attr-defined]
+    sig = LPF.ar(source=op1, frequency=6500.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.fm.six_operator_bell")
+def build_six_operator_bell(ctx: BuildContext) -> Signals:
+    from supriya.ugens import SinOsc
+    pitch = ctx.input("pitch", 74.0)
+    freq = _midi_to_hz(pitch)
+    mod = SinOsc.ar(frequency=freq * 3.5) * freq * 2.5  # type: ignore[attr-defined]
+    car = SinOsc.ar(frequency=freq + mod) * 0.3  # type: ignore[attr-defined]
+    env = abs(car).lagged(0.02)
+    return {"out": [car, car], "env_follow": env}
+
+
+@implements("gen.fm.six_operator_drone")
+def build_six_operator_drone(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise1, SinOsc
+    pitch = ctx.input("pitch", 41.0)
+    freq = _midi_to_hz(pitch)
+    mod_index = LFNoise1.kr(frequency=0.04) * 3.0 + 3.0  # type: ignore[attr-defined]
+    mod = SinOsc.ar(frequency=freq * 0.5) * freq * mod_index  # type: ignore[attr-defined]
+    car = SinOsc.ar(frequency=freq + mod) * 0.4  # type: ignore[attr-defined]
+    sig = LPF.ar(source=car, frequency=2800.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.additive.partials_32")
+def build_partials_32(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, SinOsc
+    pitch = ctx.input("pitch", 50.0)
+    freq = _midi_to_hz(pitch)
+    p1 = SinOsc.ar(frequency=freq * 1.0) * 0.4  # type: ignore[attr-defined]
+    p2 = SinOsc.ar(frequency=freq * 2.0) * 0.25  # type: ignore[attr-defined]
+    p3 = SinOsc.ar(frequency=freq * 3.0) * 0.15  # type: ignore[attr-defined]
+    sig = LPF.ar(source=p1 + p2 + p3, frequency=5500.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.additive.drawbar_bank")
+def build_drawbar_bank(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, SinOsc
+    pitch = ctx.input("pitch", 53.0)
+    freq = _midi_to_hz(pitch)
+    sub = SinOsc.ar(frequency=freq * 0.5) * 0.3  # type: ignore[attr-defined]
+    fund = SinOsc.ar(frequency=freq * 1.0) * 0.4  # type: ignore[attr-defined]
+    fifth = SinOsc.ar(frequency=freq * 1.5) * 0.2  # type: ignore[attr-defined]
+    oct = SinOsc.ar(frequency=freq * 2.0) * 0.15  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sub + fund + fifth + oct, frequency=5000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.additive.spectral_tilt")
+def build_spectral_tilt(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise1, SinOsc
+    pitch = ctx.input("pitch", 52.0)
+    freq = _midi_to_hz(pitch)
+    tilt = LFNoise1.kr(frequency=0.1) * 0.3 + 0.3  # type: ignore[attr-defined]
+    p1 = SinOsc.ar(frequency=freq) * 0.4  # type: ignore[attr-defined]
+    p2 = SinOsc.ar(frequency=freq * 2.0) * tilt  # type: ignore[attr-defined]
+    sig = LPF.ar(source=p1 + p2, frequency=4500.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.physical.steel_pan")
+def build_steel_pan(ctx: BuildContext) -> Signals:
+    from supriya.ugens import Dust, Pluck
+    pitch = ctx.input("pitch", 67.0)
+    freq = _midi_to_hz(pitch)
+    trig = Dust.ar(density=1.2)  # type: ignore[attr-defined]
+    pan = Pluck.ar(  # type: ignore[attr-defined]
+        source=trig,
+        trigger=trig,
+        maximum_delay_time=0.1,
+        delay_time=1.0 / freq,
+        decay_time=2.0,
+        coefficient=0.5,
+    ) * 0.5
+    env = abs(pan).lagged(0.02)
+    return {"out": [pan, pan], "env_follow": env}
+
+
+@implements("gen.physical.tubular_bell")
+def build_tubular_bell(ctx: BuildContext) -> Signals:
+    from supriya.ugens import Dust, Pluck
+    pitch = ctx.input("pitch", 70.0)
+    freq = _midi_to_hz(pitch)
+    trig = Dust.ar(density=0.8)  # type: ignore[attr-defined]
+    bell = Pluck.ar(  # type: ignore[attr-defined]
+        source=trig,
+        trigger=trig,
+        maximum_delay_time=0.1,
+        delay_time=1.0 / freq,
+        decay_time=4.5,
+        coefficient=0.3,
+    ) * 0.6
+    env = abs(bell).lagged(0.02)
+    return {"out": [bell, bell], "env_follow": env}
+
+
+@implements("gen.physical.glass_harmonica")
+def build_glass_harmonica(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise1, SinOsc
+    pitch = ctx.input("pitch", 76.0)
+    freq = _midi_to_hz(pitch)
+    shimmer = SinOsc.kr(frequency=6.0) * 2.0  # type: ignore[attr-defined]
+    glass = SinOsc.ar(frequency=freq + shimmer) * 0.35  # type: ignore[attr-defined]
+    sig = LPF.ar(source=glass, frequency=8000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.physical.water_drop")
+def build_water_drop(ctx: BuildContext) -> Signals:
+    from supriya.ugens import Dust, SinOsc
+    trig = Dust.ar(density=2.5)  # type: ignore[attr-defined]
+    drop = SinOsc.ar(frequency=1200.0) * trig * 0.4  # type: ignore[attr-defined]
+    env = abs(drop).lagged(0.01)
+    return {"out": [drop, drop], "env_follow": env}
+
+
+@implements("gen.texture.reverse_grain")
+def build_reverse_grain(ctx: BuildContext) -> Signals:
+    from supriya.ugens import BPF, Dust
+    pitch = ctx.input("pitch", 62.0)
+    freq = _midi_to_hz(pitch)
+    trig = Dust.ar(density=12.0)  # type: ignore[attr-defined]
+    grain = BPF.ar(source=trig, frequency=freq, reciprocal_of_q=0.1)  # type: ignore[attr-defined]
+    env = abs(grain).lagged(0.03)
+    return {"out": [grain * 1.2, grain * 1.2], "env_follow": env}
+
+
+@implements("gen.texture.pitch_shift_grain")
+def build_pitch_shift_grain(ctx: BuildContext) -> Signals:
+    from supriya.ugens import BPF, Dust, LFNoise1
+    pitch = ctx.input("pitch", 58.0)
+    freq = _midi_to_hz(pitch)
+    shift_mod = LFNoise1.kr(frequency=0.2) * 300.0  # type: ignore[attr-defined]
+    trig = Dust.ar(density=15.0)  # type: ignore[attr-defined]
+    grain = BPF.ar(source=trig, frequency=freq + shift_mod, reciprocal_of_q=0.1)  # type: ignore[attr-defined]
+    env = abs(grain).lagged(0.03)
+    return {"out": [grain * 1.3, grain * 1.3], "env_follow": env}
+
+
+@implements("gen.texture.softcut_tape")
+def build_softcut_tape(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise1, PinkNoise
+    pink = PinkNoise.ar() * 0.2  # type: ignore[attr-defined]
+    drift = LFNoise1.kr(frequency=0.15) * 800.0 + 1200.0  # type: ignore[attr-defined]
+    sig = LPF.ar(source=pink, frequency=drift)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.vocal.soprano_formant")
+def build_soprano_formant(ctx: BuildContext) -> Signals:
+    from supriya.ugens import BPF, LPF, Saw
+    pitch = ctx.input("pitch", 72.0)
+    freq = _midi_to_hz(pitch)
+    saw = Saw.ar(frequency=freq) * 0.35  # type: ignore[attr-defined]
+    f1 = BPF.ar(source=saw, frequency=800.0, reciprocal_of_q=0.1)  # type: ignore[attr-defined]
+    f2 = BPF.ar(source=saw, frequency=1600.0, reciprocal_of_q=0.1)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=f1 + f2, frequency=5000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+    return {"out": [sig * 1.2, sig * 1.2], "env_follow": env}
+
+
+@implements("gen.vocal.tenor_formant")
+def build_tenor_formant(ctx: BuildContext) -> Signals:
+    from supriya.ugens import BPF, LPF, Saw
+    pitch = ctx.input("pitch", 48.0)
+    freq = _midi_to_hz(pitch)
+    saw = Saw.ar(frequency=freq) * 0.35  # type: ignore[attr-defined]
+    f1 = BPF.ar(source=saw, frequency=400.0, reciprocal_of_q=0.1)  # type: ignore[attr-defined]
+    f2 = BPF.ar(source=saw, frequency=900.0, reciprocal_of_q=0.1)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=f1 + f2, frequency=3000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+    return {"out": [sig * 1.2, sig * 1.2], "env_follow": env}
+
+
+@implements("gen.vocal.whispering_rain")
+def build_whispering_rain(ctx: BuildContext) -> Signals:
+    from supriya.ugens import BPF, HPF, LPF, PinkNoise
+    noise = PinkNoise.ar() * 0.25  # type: ignore[attr-defined]
+    sig = HPF.ar(source=noise, frequency=400.0)  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sig, frequency=7000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.03)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.synth.casio_cz_pd")
+def build_casio_cz_pd(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise1, SinOsc
+    pitch = ctx.input("pitch", 52.0)
+    freq = _midi_to_hz(pitch)
+    pd_mod = LFNoise1.kr(frequency=0.2) * 2.0  # type: ignore[attr-defined]
+    car = SinOsc.ar(frequency=freq, phase=pd_mod) * 0.35  # type: ignore[attr-defined]
+    sig = LPF.ar(source=car, frequency=5000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.04)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.synth.vector_3d_pad")
+def build_vector_3d_pad(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, LFNoise1, Saw, SinOsc
+    pitch = ctx.input("pitch", 54.0)
+    freq = _midi_to_hz(pitch)
+    mix = LFNoise1.kr(frequency=0.1) * 0.5 + 0.5  # type: ignore[attr-defined]
+    s1 = SinOsc.ar(frequency=freq)  # type: ignore[attr-defined]
+    s2 = Saw.ar(frequency=freq * 1.002)  # type: ignore[attr-defined]
+    sig = (s1 * (1.0 - mix) + s2 * mix) * 0.35
+    sig = LPF.ar(source=sig, frequency=4500.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.synth.chebyshev_bank")
+def build_chebyshev_bank(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, Fold, SinOsc
+    pitch = ctx.input("pitch", 49.0)
+    freq = _midi_to_hz(pitch)
+    sine = SinOsc.ar(frequency=freq) * 3.5  # type: ignore[attr-defined]
+    shaped = Fold.ar(source=sine, minimum=-0.8, maximum=0.8) * 0.35  # type: ignore[attr-defined]
+    sig = LPF.ar(source=shaped, frequency=4000.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.05)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+@implements("gen.arpeggio.subharmonic_seq")
+def build_subharmonic_seq(ctx: BuildContext) -> Signals:
+    from supriya.ugens import LPF, Dust, SinOsc
+    pitch = ctx.input("pitch", 40.0)
+    freq = _midi_to_hz(pitch)
+    trig = Dust.ar(density=2.0)  # type: ignore[attr-defined]
+    sub = SinOsc.ar(frequency=freq * 0.5) * trig * 0.4  # type: ignore[attr-defined]
+    sig = LPF.ar(source=sub, frequency=2500.0)  # type: ignore[attr-defined]
+    env = abs(sig).lagged(0.03)
+    return {"out": [sig, sig], "env_follow": env}
+
+
+
 
 
 

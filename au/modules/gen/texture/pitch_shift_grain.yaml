@@ -1,0 +1,42 @@
+id: gen.texture.pitch_shift_grain
+version: 1.0.0
+level: 2
+category: generator
+family: synth
+display_name: "Pitch Shift Grain Cloud"
+summary: "Pitch Shift Grain Cloud L2 Synthesizer Voice."
+
+guarantees:
+  band_hz: [40.0, 16000.0]
+
+suggested_roles: ['granular_texture', 'atmospheric_noise', 'moving_pad']
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      param_main: {from: 0.2, to: 8.0}
+  body:
+    maps:
+      param_main: {from: 0.1, to: 5.0}
+  noise_ratio:
+    maps:
+      param_main: {from: 0.0, to: 1.0}
+  motion:
+    maps:
+      param_main: {from: 0.1, to: 2.0}
+  material:
+    maps:
+      param_main: {from: 0.5, to: 3.0}
+
+params:
+  param_main:
+    min: 0.0
+    max: 10.0
+    default: 1.0

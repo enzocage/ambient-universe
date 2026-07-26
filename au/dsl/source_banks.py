@@ -72,7 +72,38 @@ SOURCE_BANK_CATALOG: tuple[SourceBankEntry, ...] = (
     SourceBankEntry("gen.vocal.whisper_noise", SourceFamily.VOCAL_SPECTRAL, ("atmospheric_noise", "granular_texture"), 0.55, 0.2, 8.0),
     SourceBankEntry("gen.texture.grain_cloud_dense", SourceFamily.GRANULAR_STOCHASTIC, ("granular_texture", "atmospheric_noise", "moving_pad"), 0.55, 0.3, 8.0),
     SourceBankEntry("gen.noise.pink_crackle", SourceFamily.GRANULAR_STOCHASTIC, ("atmospheric_noise", "granular_texture"), 0.6, 0.4, 8.0),
+
+    # 2. 10-fach Erweiterung (Chaos, 6-Op FM, Vintage, Physical)
+    SourceBankEntry("gen.chaos.lorenz_attractor", SourceFamily.GRANULAR_STOCHASTIC, ("atmospheric_noise", "granular_texture", "moving_pad"), 0.5, 0.3, 8.0),
+    SourceBankEntry("gen.chaos.rossler_chaos", SourceFamily.FM_ADDITIVE, ("harmonic_drone", "moving_pad", "signal_motif"), 0.55, 0.2, 8.0),
+    SourceBankEntry("gen.chaos.logistic_map", SourceFamily.GRANULAR_STOCHASTIC, ("atmospheric_noise", "granular_texture"), 0.6, 0.5, 6.0),
+    SourceBankEntry("gen.chaos.chua_circuit", SourceFamily.ANALOG_WAVEFOLDED, ("foundation", "harmonic_drone", "subharmonic_pulse"), 0.4, 0.3, 10.0),
+    SourceBankEntry("gen.synth.tb303_acid_bass", SourceFamily.ANALOG_WAVEFOLDED, ("foundation", "bass_sequence", "subharmonic_pulse"), 0.45, 0.5, 8.0),
+    SourceBankEntry("gen.synth.minimoog_sub", SourceFamily.SUB_FOUNDATION, ("foundation", "subharmonic_pulse", "bass_sequence"), 0.25, 0.2, 12.0),
+    SourceBankEntry("gen.synth.oberheim_sem_pad", SourceFamily.ANALOG_WAVEFOLDED, ("moving_pad", "harmonic_drone", "atmospheric_noise"), 0.6, 0.15, 8.0),
+    SourceBankEntry("gen.synth.ms20_ring_mod", SourceFamily.ANALOG_WAVEFOLDED, ("signal_motif", "resonant_object", "bass_sequence"), 0.7, 0.6, 6.0),
+    SourceBankEntry("gen.fm.six_operator_pad", SourceFamily.FM_ADDITIVE, ("moving_pad", "harmonic_drone", "atmospheric_noise"), 0.65, 0.2, 8.0),
+    SourceBankEntry("gen.fm.six_operator_bell", SourceFamily.FM_ADDITIVE, ("resonant_object", "signal_motif"), 0.8, 0.9, 5.0),
+    SourceBankEntry("gen.fm.six_operator_drone", SourceFamily.FM_ADDITIVE, ("foundation", "harmonic_drone", "subharmonic_pulse"), 0.4, 0.2, 10.0),
+    SourceBankEntry("gen.additive.partials_32", SourceFamily.FM_ADDITIVE, ("harmonic_drone", "moving_pad", "foundation"), 0.55, 0.2, 10.0),
+    SourceBankEntry("gen.additive.drawbar_bank", SourceFamily.FM_ADDITIVE, ("harmonic_drone", "moving_pad", "foundation"), 0.55, 0.25, 10.0),
+    SourceBankEntry("gen.additive.spectral_tilt", SourceFamily.FM_ADDITIVE, ("moving_pad", "harmonic_drone", "atmospheric_noise"), 0.6, 0.15, 8.0),
+    SourceBankEntry("gen.physical.steel_pan", SourceFamily.RESONANT_PHYSICAL, ("resonant_object", "signal_motif", "arpeggiator"), 0.75, 0.8, 5.0),
+    SourceBankEntry("gen.physical.tubular_bell", SourceFamily.RESONANT_PHYSICAL, ("resonant_object", "signal_motif"), 0.8, 0.85, 5.0),
+    SourceBankEntry("gen.physical.glass_harmonica", SourceFamily.RESONANT_PHYSICAL, ("signal_motif", "harmonic_drone", "moving_pad"), 0.7, 0.3, 7.0),
+    SourceBankEntry("gen.physical.water_drop", SourceFamily.RESONANT_PHYSICAL, ("resonant_object", "granular_texture", "atmospheric_noise"), 0.75, 0.9, 4.0),
+    SourceBankEntry("gen.texture.reverse_grain", SourceFamily.GRANULAR_STOCHASTIC, ("granular_texture", "atmospheric_noise", "moving_pad"), 0.5, 0.3, 8.0),
+    SourceBankEntry("gen.texture.pitch_shift_grain", SourceFamily.GRANULAR_STOCHASTIC, ("granular_texture", "atmospheric_noise", "moving_pad"), 0.55, 0.3, 8.0),
+    SourceBankEntry("gen.texture.softcut_tape", SourceFamily.GRANULAR_STOCHASTIC, ("atmospheric_noise", "granular_texture", "moving_pad"), 0.5, 0.15, 10.0),
+    SourceBankEntry("gen.vocal.soprano_formant", SourceFamily.VOCAL_SPECTRAL, ("signal_motif", "harmonic_drone", "moving_pad"), 0.7, 0.2, 7.0),
+    SourceBankEntry("gen.vocal.tenor_formant", SourceFamily.VOCAL_SPECTRAL, ("harmonic_drone", "moving_pad", "foundation"), 0.55, 0.15, 8.0),
+    SourceBankEntry("gen.vocal.whispering_rain", SourceFamily.VOCAL_SPECTRAL, ("atmospheric_noise", "granular_texture"), 0.5, 0.1, 10.0),
+    SourceBankEntry("gen.synth.casio_cz_pd", SourceFamily.ANALOG_WAVEFOLDED, ("moving_pad", "harmonic_drone", "signal_motif"), 0.6, 0.2, 8.0),
+    SourceBankEntry("gen.synth.vector_3d_pad", SourceFamily.ANALOG_WAVEFOLDED, ("moving_pad", "harmonic_drone", "atmospheric_noise"), 0.65, 0.15, 8.0),
+    SourceBankEntry("gen.synth.chebyshev_bank", SourceFamily.ANALOG_WAVEFOLDED, ("signal_motif", "resonant_object", "bass_sequence"), 0.7, 0.6, 6.0),
+    SourceBankEntry("gen.arpeggio.subharmonic_seq", SourceFamily.RHYTHMIC_PULSE, ("arpeggiator", "subharmonic_pulse", "foundation"), 0.5, 0.5, 8.0),
 )
+
 
 
 
@@ -90,15 +121,20 @@ def select_diverse_source_ensemble(
     family_counts: dict[SourceFamily, int] = {f: 0 for f in SourceFamily}
 
     for role in roles:
-        # Finde passende Einträge für die Rolle
+        # Priorisiere ungenutzte Klangfamilien (family_counts == 0) fuer maximale Diversitaet
         matching = [
             e for e in SOURCE_BANK_CATALOG
-            if role in e.primary_roles and family_counts[e.family] < 2
+            if role in e.primary_roles and family_counts[e.family] == 0
         ]
         if not matching:
-            # Fallback: Finde beliebiges Modul, dessen Familie noch < 2 Rollen besetzt
+            matching = [
+                e for e in SOURCE_BANK_CATALOG
+                if role in e.primary_roles and family_counts[e.family] < 2
+            ]
+        if not matching:
+            matching = [e for e in SOURCE_BANK_CATALOG if family_counts[e.family] == 0]
+        if not matching:
             matching = [e for e in SOURCE_BANK_CATALOG if family_counts[e.family] < 2]
-
         if not matching:
             matching = list(SOURCE_BANK_CATALOG)
 
@@ -110,6 +146,7 @@ def select_diverse_source_ensemble(
         family_counts[chosen.family] += 1
 
     return result
+
 
 
 def build_tone_dna_for_entry(entry: SourceBankEntry, role: str, seed: SeedPath) -> ToneDNA:
