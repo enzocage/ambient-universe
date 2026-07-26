@@ -98,6 +98,23 @@ def _job_summary(job: Job) -> dict[str, Any]:
                 "audition_depth": r.budget.audition_depth,
                 "revision_passes": r.budget.revision_passes,
             },
+            "production_workflow": {
+                "scenes": [
+                    {
+                        "id": scene.scene_id,
+                        "name": scene.name,
+                        "start_s": round(scene.start_s, 2),
+                        "end_s": round(scene.end_s, 2),
+                        "roles": list(scene.active_roles),
+                        "energy": scene.energy,
+                        "density": scene.density,
+                        "transition": scene.transition,
+                    }
+                    for scene in r.workflow.scenes
+                ],
+                "racks": [rack.model_dump() for rack in r.workflow.racks],
+                "resamples": [resample.model_dump() for resample in r.workflow.resamples],
+            },
             "harmony": {
                 "mode": r.blueprint.field.mode,
                 "chords": [

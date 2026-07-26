@@ -23,6 +23,7 @@ from au.dsl.blueprint import Blueprint, RoleSlot
 from au.dsl.dna import AlbumDNA
 from au.dsl.dramaturgy import DramaturgyArc, generate_arc
 from au.dsl.complexity import CompositionBudget, budget_for_duration
+from au.dsl.ableton_workflow import ProductionWorkflow, build_production_workflow
 from au.dsl.element import ElementRecipe
 from au.dsl.evolution import EvolutionPlan, generate_evolution_plan
 from au.dsl.harmony import (
@@ -68,6 +69,7 @@ class ComposeResult:
     transformed_motifs: tuple[TransformedMotif, ...]
     hierarchy: HierarchicalScore
     budget: CompositionBudget
+    workflow: ProductionWorkflow
 
 
 
@@ -206,6 +208,16 @@ def compose_track(
             )
 
 
+    rack_modules: dict[str, str] = {}
+    for layer in layers:
+        rack_modules.setdefault(layer.role, recipes[layer.element_id].voice_module_id)
+    workflow = build_production_workflow(
+        duration_s=duration_s,
+        budget_name=budget.name,
+        roles=tuple(slot.role for slot in slots),
+        rack_modules=rack_modules,
+    )
+
     relations = []
     for hint in blueprint.relation_hints:
         if hint.kind not in _STRUCTURAL_KINDS:
@@ -279,4 +291,5 @@ def compose_track(
         transformed_motifs=transformed_motifs,
         hierarchy=hierarchy,
         budget=budget,
+        workflow=workflow,
     )
