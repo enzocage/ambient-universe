@@ -63,13 +63,23 @@ tests/         Tests inkl. Grammatik-, Determinismus- und Klangregressionstests
 |-------|--------|--------|
 | 0 | Fundament, Konfiguration, `au doctor`, NRT-Render | **fertig** |
 | 1 | Modulkontrakt, Porttypen, PatchGraph, Registry, 15 Manifeste | **fertig** |
-| 2 | L1–L3: SynthDef-Compiler, Klangatom, Stimme, Geste | als Nächstes |
-| 3 | L4: Klangelement, Vorhör-Renderer | offen |
-| 4–5 | Album-DNA-Agent, Blueprint-Generator | offen |
-| 6–7 | Element-Studio, KI-Modulation, Bibliothek | offen |
-| 8 | L5/L6: Relationen, Kohärenz-Solver | offen |
-| 9–10 | Sektionen, Track, Album, Mastering | offen |
+| 2 | L1–L3: SynthDef-Compiler, Klangatom, Stimme, Geste | **fertig** |
+| 3 | L4: Klangelement, Vorhör-Renderer, MIDI-Export | **fertig** |
+| 4 | Album-DNA-Agent, Negativregeln, Innovations-Vektor | **fertig** |
+| 5 | Blueprint-Generator (DNA → Rollen-Slots) | **fertig** |
+| 6 | Vorschlags-Engine, Editor-Agent | **fertig** |
+| 7 | Elementbibliothek (Freeze, SQLite-Index) | **fertig** |
+| 8 | L5/L6: Relations-Algebra, Kohärenz-Solver | **fertig** |
+| 9 | L7/L8: Sektionen, Trackrendering, Bogenform | **fertig** |
+| 10 | Album, Mastering, Reproduktionstest | als Nächstes |
 | 11–13 | Kritik/Reparatur, DAW-Brücke, Härtung | offen |
+
+**Wichtiger Vorbehalt:** Phasen 4 und 6 sehen laut `plan.md` einen echten LLM-Dialog
+(DNA-Agent, Editor-Agent) vor. Diese Codebasis hat zur Laufzeit keinen LLM-Zugriff;
+implementiert ist ein regelbasierter Stichwort-Übersetzer mit klar dokumentierter
+Austauschstelle (`generate_dna()`, `apply_instruction()`), der dieselben Typen liefert.
+Phase 8/9 nutzen eine strukturelle Band/Zeit-Konfliktfunktion statt der vollen
+spektralen Maskierungskarte — siehe Commit-Nachrichten für Details je Phase.
 
 ## Lizenz
 
