@@ -328,6 +328,18 @@ def compile_graph(
                 prospective[control] = float(n.macros.get(macro_name, macro_spec.default))
 
     with supriya.SynthDefBuilder(**prospective) as builder:
+        # Ohne diese Zeile ziehen Rauschquellen (BrownNoise, PinkNoise, Dust, …)
+        # aus scsynths eigenem, node-ID-abhaengigen RNG-Strom -- nicht aus
+        # unserer Seed-Hierarchie. Zwei Renderlaeufe mit identischem Rezept
+        # erzeugten dadurch nachweislich verschiedenes Audio (gefunden ueber
+        # den Determinismustest von au.integrator.compose). RandSeed.ir()
+        # zwingt den Default-Zufallsstrom dieser Synth-Instanz auf einen aus
+        # SeedPath abgeleiteten Wert -- ausgefuehrt einmalig beim Start des
+        # Synths (trigger=1 bedeutet: bei Erzeugung, nicht kontinuierlich).
+        from supriya.ugens import RandSeed
+
+        RandSeed.ir(trigger=1, seed=seed.sc)  # type: ignore[attr-defined]
+
         if feedback_edges:
             wiring.local_in = LocalIn.ar(channel_count=len(feedback_edges))  # type: ignore[attr-defined]
 

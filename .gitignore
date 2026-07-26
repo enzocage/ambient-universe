@@ -15,6 +15,11 @@ synthdefs/*.scsyndef
 # nicht versioniert. Plaene und Rezepte dagegen schon.
 projects/*/renders/
 projects/*/master/
+# au compose / au serve legen Test- und Demolaeufe direkt unter projects/
+# ab (cli_compose/, studio/<job-id>/) -- das sind generierte WAVs, kein
+# Quellmaterial.
+projects/cli_compose/
+projects/studio/
 elements/*/preview_*.flac
 elements/*/preview_*.wav
 elements/*/versions/*.flac

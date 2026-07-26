@@ -108,8 +108,72 @@ ROLE_PROFILES: dict[str, RoleProfile] = {
             lufs=-96,
             summary="Geplante Stille/Aussparung.",
         ),
+        # -- Erweiterte Elementkategorien (Nutzeranforderung) --------------------
+        # "drone" wird bewusst nicht dupliziert: harmonic_drone/foundation decken
+        # das bereits ab. Die folgenden acht Rollen sind eigenstaendig, weil sie
+        # andere Ansteuerungsformen brauchen (Sequenz, Melodie, Perkussion) statt
+        # nur Poisson-Flaechen -- siehe au.dsl.harmony / au.dsl.rhythm.
+        RoleProfile(
+            role="bass_sequence",
+            band_hz=(35, 250),
+            density=0.10,
+            lufs=-19,
+            summary="Sequenzierte, feldrelative Basslinie -- Puls statt Flaeche.",
+        ),
+        RoleProfile(
+            role="arpeggiator",
+            band_hz=(300, 3500),
+            density=0.35,
+            lufs=-25,
+            summary="Regelmaessig getaktete, akkordgebundene Notenfolge.",
+        ),
+        RoleProfile(
+            role="harmonic_sphere",
+            band_hz=(100, 5000),
+            density=0.06,
+            lufs=-23,
+            summary="Breite, einhuellende Klangkugel -- traegt das volle "
+            "Akkordfeld, nicht nur den Grundton.",
+        ),
+        RoleProfile(
+            role="subtle_percussive_background",
+            band_hz=(200, 9000),
+            density=0.20,
+            lufs=-30,
+            summary="Sehr leise rhythmische Textur im Hintergrund, kein Beat im Vordergrund.",
+        ),
+        RoleProfile(
+            role="space_noise_elements",
+            band_hz=(20, 16000),
+            density=1.0,
+            lufs=-36,
+            summary="Breitbandiges Raum-/Weltraumrauschen als Traeger der Distanz.",
+        ),
+        RoleProfile(
+            role="melody_element",
+            band_hz=(400, 3200),
+            density=0.05,
+            lufs=-20,
+            summary="Fuehrende, feldrelative Melodiestimme im Vordergrund.",
+        ),
+        RoleProfile(
+            role="speech",
+            band_hz=(300, 3400),
+            density=0.03,
+            lufs=-22,
+            summary="Sprachaehnliches/gesprochenes Material. Widerspricht die "
+            "Standard-Negativregel 'no_voice_formants' -- siehe "
+            "ROLES_CONFLICTING_WITH_NO_VOICE_RULE.",
+        ),
     )
 }
+
+#: Rollen, die der Standard-Negativregel "keine Stimme" (plan.md 8.1,
+#: no_voice_formants) absichtlich widersprechen. Ein Blueprint, der "speech"
+#: verwendet, muss diese Regel bewusst entfernen oder lockern -- sonst
+#: eskaliert L10 spaeter an einem selbstverursachten Widerspruch (plan.md
+#: 4.10: Widersprueche werden vorgelegt, nicht versteckt).
+ROLES_CONFLICTING_WITH_NO_VOICE_RULE: frozenset[str] = frozenset({"speech"})
 
 #: Erste Primzahlen ab 30s — Grundlage der koprimen Periodenvergabe.
 _PRIME_PERIODS_S: tuple[float, ...] = (37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83)

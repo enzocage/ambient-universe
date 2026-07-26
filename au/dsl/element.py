@@ -17,7 +17,11 @@ from pydantic import BaseModel, Field
 
 from au.dsl.field import HarmonicField
 
-PatternKind = Literal["poisson", "euclid"]
+PatternKind = Literal["poisson", "euclid", "sustained"]
+"""``sustained`` traegt eine durchgehende Flaeche (Fundament, Drone, Atmo,
+Pad) statt diskreter Ereignisse -- ohne diesen Modus bleiben genau die
+Rollen stumm, die den Track eigentlich tragen sollen (siehe
+au.dsl.pattern.sustained_events)."""
 
 
 class ElementRecipe(BaseModel):

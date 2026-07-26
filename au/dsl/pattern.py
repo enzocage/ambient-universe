@@ -68,6 +68,45 @@ def poisson_density_events(
     return events
 
 
+def sustained_events(
+    duration_s: float,
+    *,
+    field: HarmonicField,
+    seed: SeedPath,
+    change_every_s: tuple[float, float] = (18.0, 40.0),
+    overlap_s: float = 6.0,
+) -> list[NoteEvent]:
+    """Eine durchgehende Flaeche statt diskreter Ereignisse.
+
+    Fuer Rollen, die den Track tragen sollen (Fundament, Drone, Atmo, Pad):
+    ohne diese Funktion wuerden auch sie ueber ``poisson_density_events`` mit
+    wenigen Ereignissen pro Minute angesteuert und der Track bestuende
+    ueberwiegend aus Stille. Stattdessen wird die Dauer in wenige lange,
+    sich leicht ueberlappende Abschnitte geteilt, deren Stufe jeweils wechselt
+    (harmonische Bewegung), waehrend die Flaeche selbst nie abreisst.
+
+    ``overlap_s`` sorgt dafuer, dass ein Abschnitt zu klingen beginnt, bevor
+    der vorherige endet -- ein echter Schnitt waere in einer Ambient-Flaeche
+    hoerbar, eine Ueberlappung nicht.
+    """
+    rng = np.random.default_rng(seed.child("pattern", "sustained").value & 0xFFFF_FFFF)
+    degrees = field.degrees()
+
+    events: list[NoteEvent] = []
+    t = 0.0
+    previous_degree: int | None = None
+    while t < duration_s:
+        span = float(rng.uniform(*change_every_s))
+        dur = min(span + overlap_s, duration_s - t + overlap_s)
+        choices = [d for d in degrees if d != previous_degree] or list(degrees)
+        degree = int(rng.choice(choices))
+        velocity = float(rng.uniform(0.5, 0.75))  # traegt, draengt sich nicht auf
+        events.append(NoteEvent(time_s=t, degree=degree, duration_s=dur, velocity=velocity))
+        previous_degree = degree
+        t += span
+    return events
+
+
 def euclid_sparse_events(
     duration_s: float,
     *,

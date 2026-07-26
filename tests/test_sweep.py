@@ -35,3 +35,35 @@ def test_voice_is_audible_at_default_settings(module_id: str, registry: Registry
     result = sweep_macro(module_id, "brightness", registry, duration=5.0)
     assert result.peak_level > 0.01, f"{module_id} ist praktisch stumm ({result.peak_level})"
     assert result.peak_level < 0.9, f"{module_id} ist zu laut ({result.peak_level})"
+
+
+@pytest.mark.parametrize("module_id", [*_VOICES, "gen.noise.colored"])
+def test_noise_driven_voices_are_deterministic_across_separate_renders(
+    module_id: str, registry: Registry, tmp_path
+) -> None:
+    """Regressionstest fuer einen echten Fund: BrownNoise/PinkNoise/WhiteNoise
+    ziehen ohne explizites RandSeed.ir() aus scsynths eigenem, node-ID-
+    abhaengigen RNG-Strom statt aus unserer Seed-Hierarchie. Zwei getrennte
+    NRT-Renderlaeufe mit identischem Rezept erzeugten dadurch nachweislich
+    verschiedenes Audio (gefunden ueber den Determinismustest von
+    au.integrator.compose) -- der Compiler setzt seither RandSeed.ir() beim
+    Aufbau jeder SynthDef (au/render/compiler.py)."""
+    from au.core.seeds import SeedPath
+    from au.core.hashing import sha256_audio
+    from au.render.voice import render_graph, single_voice_graph
+
+    seed = SeedPath.root(99).child("noise_determinism_test")
+    hashes = set()
+    for i in range(3):
+        r, _ = render_graph(
+            single_voice_graph(module_id),
+            registry,
+            tmp_path / f"n_{i}.wav",
+            duration=6.0,
+            seed=seed,
+            name=f"det_{module_id}_{i}",
+        )
+        hashes.add(r.audio_sha256)
+    assert len(hashes) == 1, (
+        f"{module_id}: {len(hashes)} verschiedene Fingerabdruecke bei gleichem Seed"
+    )

@@ -6,6 +6,8 @@ von der Klangerzeugung auf Sampleebene bis zum fertigen, gemasterten Album.
 
 > Architektur, Organisationsdefinitionen und Stufenplan: **[plan.md](plan.md)**
 
+![Ambient Universe Studio: Prompt, Album-DNA, Blueprint-Rollen-Slots, Solver-Status und Waveform-Player für Mix und Stems](gfx/s2.png)
+
 ## Der Kompositionsworkflow
 
 1. **Prompt** — eine KI definiert ganzheitlich Charakter und Innovationsebene des Albums (`au dna`)
@@ -33,6 +35,20 @@ Weitere Befehle, die heute schon laufen:
 au probe --kind stack --duration 60 --repeat 3   # NRT-Render, Leistung, Determinismus
 au modules --level 2                             # Modulkatalog
 au modules --show gen.object.modal_bell          # Modul im Detail
+au compose "Ein kaltes, metallisches Album …" -d 60   # Prompt -> hörbarer Track (CLI)
+au serve                                              # Web-Studio unter http://127.0.0.1:8000
+```
+
+### Web-Studio
+
+`au serve` startet eine lokale Weboberfläche (FastAPI + Vanilla-JS, kein Build-Schritt):
+Prompt eingeben → Fortschritt live verfolgen → Album-DNA, Blueprint-Rollen-Slots und
+Solver-Status einsehen → Mix und Stems mit echter Waveform-Anzeige (Web-Audio-API,
+Klick-zum-Springen, Abspielkopf) direkt im Browser anhören. Erfordert das `studio`-Extra:
+
+```bash
+uv pip install -e ".[studio]"
+au serve --port 8000
 ```
 
 ### Voraussetzungen

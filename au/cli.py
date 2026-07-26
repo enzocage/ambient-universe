@@ -215,19 +215,65 @@ def modules(
 # ---------------------------------------------------------------------------
 
 _PLANNED: dict[str, tuple[str, str]] = {
-    "dna": ("Phase 4", "Prompt -> album_dna.json (Charakter + Innovationsebene)"),
-    "blueprint": ("Phase 5", "DNA -> 10-Level-Verschaltungshierarchie"),
-    "propose": ("Phase 6", "Elementkandidaten erzeugen und vorhoeren"),
-    "modulate": ("Phase 6", "Kandidat per natuerlicher Sprache modifizieren"),
-    "freeze": ("Phase 6", "Element unveraenderlich in die Bibliothek legen"),
-    "lib": ("Phase 7", "Elementbibliothek durchsuchen"),
-    "arrange": ("Phase 8", "Layer platzieren, Relationen setzen, Solver laufen lassen"),
-    "sections": ("Phase 9", "Sektionen und Uebergaenge bilden"),
-    "render": ("Phase 9", "Track mit Stems rendern"),
+    "modulate": ("Phase 6", "Kandidat per natuerlicher Sprache modifizieren (interaktiv)"),
+    "sections": ("Phase 9", "Eigenstaendige Sektionsbearbeitung (jenseits von au compose)"),
     "album": ("Phase 10", "Album sequenzieren, mastern, exportieren"),
     "verify": ("Phase 10", "Reproduktionstest gegen manifest.json"),
     "audit": ("Phase 13", "Lizenzbericht aus den Modul-Manifesten"),
 }
+
+
+@app.command()
+def compose(
+    prompt: str = typer.Argument(..., help="Charakter- und Innovationsbeschreibung des Albums."),
+    duration: float = typer.Option(60.0, "--duration", "-d", help="Trackdauer in Sekunden."),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Zielverzeichnis."),
+    max_slots: int = typer.Option(6, "--slots", help="Wie viele Rollen-Slots besetzt werden."),
+) -> None:
+    """Ein Durchlauf: Prompt -> DNA -> Blueprint -> Solver -> hoerbarer Track."""
+    from au.integrator.compose import compose_track
+
+    cfg = get_config()
+    out_dir = output or (cfg.projects_dir / "cli_compose")
+
+    def report(msg: str) -> None:
+        console.print(f"  {escape(msg)}")
+
+    console.print(f"[bold]Komponiere:[/bold] {escape(prompt)}")
+    try:
+        result = compose_track(
+            prompt, out_dir, duration_s=duration, max_slots=max_slots, cfg=cfg, on_progress=report
+        )
+    except Exception as exc:  # noqa: BLE001
+        console.print(f"[red]Fehlgeschlagen: {escape(str(exc))}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    console.print()
+    console.print(f"[green]Fertig:[/green] {result.track.mix_path}")
+    console.print(f"  Stems: {', '.join(str(p) for p in result.track.stem_paths.values())}")
+    if result.open_questions:
+        console.print("[yellow]Hinweise:[/yellow]")
+        for q in result.open_questions:
+            console.print(f"  • {escape(q)}")
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="Bind-Adresse."),
+    port: int = typer.Option(8000, help="Port."),
+    reload: bool = typer.Option(False, help="Auto-Reload fuer Entwicklung."),
+) -> None:
+    """Startet das Web-Studio (Browser-Oberflaeche fuer den Kompositionsworkflow)."""
+    try:
+        import uvicorn
+    except ImportError as exc:
+        console.print(
+            '[red]uvicorn ist nicht installiert. Abhilfe: uv pip install -e ".[studio]"[/red]'
+        )
+        raise typer.Exit(code=1) from exc
+
+    console.print(f"[green]Studio laeuft auf http://{host}:{port}[/green]")
+    uvicorn.run("au.studio.api:app", host=host, port=port, reload=reload)
 
 
 def _register_planned() -> None:

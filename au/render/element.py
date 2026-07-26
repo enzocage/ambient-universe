@@ -17,7 +17,7 @@ from au.core.graph import Edge, Node, PatchGraph
 from au.core.ports import PortType
 from au.core.seeds import SeedPath
 from au.dsl.element import ElementRecipe
-from au.dsl.pattern import NoteEvent, euclid_sparse_events, poisson_density_events
+from au.dsl.pattern import NoteEvent, euclid_sparse_events, poisson_density_events, sustained_events
 from au.render.backend import RenderResult, render_score
 from au.render.compiler import compile_graph
 
@@ -41,6 +41,8 @@ def _element_graph(voice_module_id: str) -> PatchGraph:
 
 
 def generate_events(recipe: ElementRecipe, seed: SeedPath) -> list[NoteEvent]:
+    if recipe.pattern_kind == "sustained":
+        return sustained_events(recipe.duration_s, field=recipe.field, seed=seed)
     if recipe.pattern_kind == "poisson":
         return poisson_density_events(
             recipe.duration_s,
