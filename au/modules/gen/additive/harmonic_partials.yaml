@@ -10,6 +10,9 @@ summary: >
 guarantees:
   band_hz: [30.0, 18000.0]
 
+suggested_roles: [harmonic_drone, moving_pad, foundation]
+
+
 ports:
   in:
     - {name: pitch, type: ctrl, unit: midinote, required: true}

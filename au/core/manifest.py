@@ -251,7 +251,9 @@ class ModuleManifest(BaseModel):
     cost: Cost = Field(default_factory=Cost)
 
     tags: list[str] = Field(default_factory=list)
+    suggested_roles: list[str] = Field(default_factory=list)
     semantic_vectors: dict[str, float] = Field(default_factory=dict)
+
 
     license: LicenseInfo = Field(default_factory=LicenseInfo)
     compatibility: Compatibility = Field(default_factory=Compatibility)

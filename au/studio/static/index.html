@@ -292,11 +292,18 @@
       <h3>Musikalische Struktur (Akkorde, Motive &amp; Sektionen)</h3>
       <div id="harmonyCard" class="panel" style="background:var(--panel-2); margin-top:8px; padding:12px;"></div>
 
+      <h3>Verwendete Module &amp; Zusammenspiel im Track</h3>
+      <div id="usedModulesCard" class="panel" style="background:var(--panel-2); margin-top:8px; padding:12px;"></div>
+
+      <h3>Klangerzeuger-Landschaft (Katalog aller ansteuerbaren Module)</h3>
+      <div id="moduleLandscapeCard" class="panel" style="background:var(--panel-2); margin-top:8px; padding:12px;"></div>
+
       <h3>Stems</h3>
       <div class="stem-list" id="stemList"></div>
     </div>
   </div>
 </div>
+
 
 
 <script>
@@ -654,8 +661,29 @@ async function renderResult(job) {
       </div>`;
   }
 
+  // Render Used Modules Card
+  if (r.used_modules && el("usedModulesCard")) {
+    const rowsHtml = r.used_modules.map(m => `
+      <div style="background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px; font-size:0.82rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong style="color:var(--accent); font-size:0.9rem;">Rollen-Slot „${m.role}“</strong>
+          <span class="tag" style="background:#262b38; color:#7aa2ff; font-weight:bold; font-size:0.8rem;">${m.module_id}</span>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:16px; font-size:0.78rem; color:var(--muted);">
+          <span>Frequenzband: <strong style="color:var(--fg);">${m.band_hz[0]}–${m.band_hz[1]} Hz</strong></span>
+          <span>Aktiv-Zeit: <strong style="color:var(--ok);">${m.entry_time_s}s – ${m.exit_time_s}s</strong></span>
+          <span>Transposition: <strong style="color:var(--accent);">${m.transposition >= 0 ? '+' : ''}${m.transposition} st</strong></span>
+        </div>
+      </div>`).join("");
+    el("usedModulesCard").innerHTML = rowsHtml;
+  }
+
+  // Load and highlight Module Landscape Catalog
+  loadModuleLandscape(r.used_modules || []);
+
   // Render Graph & Layer Inspector
   if (r.graph_url) {
+
     try {
       const gRes = await fetch(API + r.graph_url);
       if (gRes.ok) {
@@ -817,9 +845,56 @@ async function triggerLayerPreview(jobId, layerId, macrosList) {
   }
 }
 
+async function loadModuleLandscape(usedModules = []) {
+  try {
+    const res = await fetch(API + "/api/modules");
+    if (!res.ok) return;
+    const data = await res.json();
+    const modules = data.modules || [];
+    const usedIds = new Set((usedModules || []).map(m => m.module_id));
+
+    const card = el("moduleLandscapeCard");
+    if (!card) return;
+
+    const itemsHtml = modules.map(m => {
+      const isUsed = usedIds.has(m.module_id);
+      const activeBadge = isUsed
+        ? `<span class="tag" style="background:#123023; color:var(--ok); font-weight:bold; font-size:0.7rem;">AKTIV IN TRACK</span>`
+        : `<span class="tag" style="font-size:0.7rem; color:var(--muted);">VERFÜGBAR</span>`;
+      const borderStyle = isUsed
+        ? "border-color:var(--ok); background:#15221b;"
+        : "border-color:var(--border); background:var(--panel);";
+
+      const rolesHtml = (m.suggested_roles || []).map(r => `<span class="tag" style="font-size:0.68rem; background:#1c2333;">${r}</span>`).join(" ");
+
+      return `
+        <div style="border:1px solid; ${borderStyle} border-radius:8px; padding:10px; font-size:0.8rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <strong style="color:var(--fg); font-size:0.85rem;">${m.module_id}</strong>
+            ${activeBadge}
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-bottom:6px;">Kategorie: <strong>${m.category}</strong></div>
+          <div style="display:flex; flex-wrap:wrap; gap:4px;">${rolesHtml}</div>
+        </div>`;
+    }).join("");
+
+    card.innerHTML = `
+      <div style="font-size:0.85rem; color:var(--muted); margin-bottom:8px;">
+        Insgesamt <strong>${modules.length} ansteuerbare Synthesizer- und Effekt-Module</strong> im System registriert.
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
+        ${itemsHtml}
+      </div>`;
+  } catch (e) {
+    console.error("Landschaft konnte nicht geladen werden:", e);
+  }
+}
+
 async function loadHistory() {
+  loadModuleLandscape();
   const res = await fetch(API + "/api/jobs");
   const jobsList = await res.json();
+
   const hist = el("history");
   if (!jobsList.length) { hist.innerHTML = '<div class="empty">Noch keine Läufe.</div>'; return; }
   hist.innerHTML = "";

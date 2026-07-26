@@ -67,7 +67,7 @@ class Candidate:
     thesis: str
 
 
-def _voices_for_slot(slot: RoleSlot, registry: Registry) -> list[str]:
+def _voices_for_slot(slot: RoleSlot, registry: Registry, seed: SeedPath | None = None) -> list[str]:
     """Stimmen, deren Band den Slot ueberlappt.
 
     Nur vollstaendige L2-Stimmen (mit Huellkurve, Resonanz, Makros) zaehlen
@@ -81,14 +81,22 @@ def _voices_for_slot(slot: RoleSlot, registry: Registry) -> list[str]:
         for m in registry.query(category=Category.GENERATOR)
         if m.level == 2 or (allow_noise and m.id in _WHITELISTED_L1_VOICES)
     ]
-    scored = []
+    scored: list[tuple[float, str]] = []
     for m in candidates:
         low, high = m.guarantees.band_hz
         slot_low, slot_high = slot.band_hz
         overlap = min(high, slot_high) - max(low, slot_low)
         if overlap > 0:
-            scored.append((overlap, m.id))
-    scored.sort(key=lambda pair: (-pair[0], pair[1]))
+            role_bonus = 1000.0 if slot.role in m.suggested_roles else 0.0
+            scored.append((role_bonus + overlap, m.id))
+
+    if seed:
+        import random
+        rng = random.Random(int(seed.value & 0xFFFF_FFFF))
+        scored.sort(key=lambda pair: (pair[0] + rng.uniform(-10.0, 10.0)), reverse=True)
+    else:
+        scored.sort(key=lambda pair: (-pair[0], pair[1]))
+
     return [mid for _, mid in scored] or [m.id for m in candidates]
 
 
@@ -102,9 +110,10 @@ def propose_candidates(
     n: int = 5,
 ) -> list[Candidate]:
     """Erzeugt ``n`` Kandidaten mit unterschiedlicher These fuer einen Slot."""
-    voices = _voices_for_slot(slot, registry)
+    voices = _voices_for_slot(slot, registry, seed=seed)
     if not voices:
         raise ValueError(f"Kein Modul im Katalog deckt das Band von {slot.role} ab.")
+
 
     out: list[Candidate] = []
     for i in range(n):

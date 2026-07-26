@@ -109,8 +109,39 @@ def _job_summary(job: Job) -> dict[str, Any]:
                 "peak": [round(x, 1) for x in r.section_arrangement.peak],
                 "outro": [round(x, 1) for x in r.section_arrangement.outro],
             },
+            "used_modules": [
+                {
+                    "layer_id": layer.layer_id,
+                    "role": layer.role,
+                    "module_id": (r.recipes[layer.element_id].voice_module_id if layer.element_id in r.recipes else "unknown"),
+                    "band_hz": [round(layer.band_hz[0], 1), round(layer.band_hz[1], 1)],
+                    "entry_time_s": round(layer.entry_time_s, 1),
+                    "exit_time_s": round(layer.exit_time_s, 1),
+                    "transposition": round(layer.transposition, 1),
+                }
+                for layer in r.solve_result.layers
+            ],
         }
     return summary
+
+
+@app.get("/api/modules")
+def catalog_modules() -> dict[str, Any]:
+    from au.analysis.capabilities import audit_capability_matrix
+    matrix = audit_capability_matrix()
+    return {
+        "modules": [
+            {
+                "module_id": item.module_id,
+                "version": item.version,
+                "category": item.category,
+                "suggested_roles": list(item.suggested_roles),
+                "is_renderable": item.is_renderable,
+            }
+            for item in matrix.modules
+        ]
+    }
+
 
 
 

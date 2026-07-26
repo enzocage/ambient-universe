@@ -10,6 +10,9 @@ summary: >
 guarantees:
   band_hz: [50.0, 15000.0]
 
+suggested_roles: [signal_motif, resonant_object, arpeggiator]
+
+
 ports:
   in:
     - {name: pitch, type: ctrl, unit: midinote, required: true}

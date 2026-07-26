@@ -99,14 +99,15 @@ def compose_track(
     layers: list[LayerInstance] = []
     role_to_layer: dict[str, str] = {}
 
-    for slot in slots:
+    for slot_idx, slot in enumerate(slots):
         report(f"Erzeuge Kandidaten für Slot „{slot.role}“ …")
         candidates = propose_candidates(
-            slot, dna, blueprint.field, reg, seed=root_seed.child("propose", slot.slot_id), n=3
+            slot, dna, blueprint.field, reg, seed=root_seed.child("propose", slot.slot_id), n=5
         )
 
         pattern_kind = "sustained" if slot.role in ("foundation", "harmonic_drone", "moving_pad") else "poisson"
-        chosen = candidates[0].recipe.model_copy(
+        cand_idx = (slot_idx + int(root_seed.value)) % len(candidates)
+        chosen = candidates[cand_idx].recipe.model_copy(
             update={
                 "duration_s": duration_s,
                 "id": f"{slot.slot_id}_elm",
@@ -114,6 +115,7 @@ def compose_track(
             }
         )
         recipes[chosen.id] = chosen
+
 
         layer_id = f"{slot.slot_id}_layer"
         role_to_layer[slot.role] = layer_id
