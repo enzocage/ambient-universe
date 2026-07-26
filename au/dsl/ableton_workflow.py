@@ -89,15 +89,32 @@ class ProductionWorkflow(BaseModel):
                 errors.append("Keine hoerbare Szenenkontrastdimension")
         return tuple(errors)
 
+    def validate_budget(self, *, expected_scenes: int, expected_roles: int) -> tuple[str, ...]:
+        errors = list(self.validate())
+        if len(self.scenes) != expected_scenes:
+            errors.append(f"Budget verlangt {expected_scenes} Szenen, erzeugt wurden {len(self.scenes)}")
+        if len(self.racks) != expected_roles:
+            errors.append(f"Budget verlangt {expected_roles} Racks, erzeugt wurden {len(self.racks)}")
+        return tuple(errors)
+
 
 def build_production_workflow(
-    *, duration_s: float, budget_name: str, roles: tuple[str, ...], rack_modules: dict[str, str]
+    *, duration_s: float, budget_name: str, section_count: int = 7,
+    roles: tuple[str, ...], rack_modules: dict[str, str]
 ) -> ProductionWorkflow:
     """Erzeugt eine kontrastierende Szenenfolge statt einer linearen Dauersumme."""
-    names = ("intro", "groove", "build", "vacuum", "peak", "transform", "outro")
-    energies = (0.18, 0.36, 0.58, 0.12, 0.95, 0.68, 0.22)
-    densities = (0.16, 0.35, 0.58, 0.08, 0.9, 0.52, 0.18)
-    fractions = (0.0, 0.12, 0.28, 0.42, 0.52, 0.72, 0.86, 1.0)
+    profiles = {
+        2: (("intro", "peak"), (0.2, 0.9), (0.15, 0.82)),
+        4: (("intro", "build", "peak", "outro"), (0.18, 0.5, 0.92, 0.22), (0.14, 0.48, 0.9, 0.18)),
+        6: (("intro", "groove", "build", "vacuum", "peak", "outro"), (0.18, 0.36, 0.58, 0.12, 0.95, 0.22), (0.16, 0.35, 0.58, 0.08, 0.9, 0.18)),
+        8: (("intro", "groove", "build", "lift", "vacuum", "peak", "transform", "outro"), (0.16, 0.3, 0.46, 0.68, 0.1, 0.95, 0.65, 0.2), (0.12, 0.28, 0.46, 0.7, 0.06, 0.92, 0.52, 0.16)),
+    }
+    names, energies, densities = profiles.get(section_count, profiles[7] if 7 in profiles else profiles[8])
+    if section_count == 7:
+        names = ("intro", "groove", "build", "vacuum", "peak", "transform", "outro")
+        energies = (0.18, 0.36, 0.58, 0.12, 0.95, 0.68, 0.22)
+        densities = (0.16, 0.35, 0.58, 0.08, 0.9, 0.52, 0.18)
+    fractions = tuple(index / len(names) for index in range(len(names) + 1))
     racks = tuple(
         ProductionRack(
             rack_id=f"rack_{role}",

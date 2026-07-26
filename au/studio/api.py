@@ -207,6 +207,10 @@ def compose(req: ComposeRequest) -> dict[str, str]:
         raise HTTPException(400, "Prompt darf nicht leer sein.")
     duration = max(10.0, min(600.0, req.duration_s))
     complexity = req.complexity if req.complexity in {"auto", "sketch", "developing", "rich", "album", "maximal"} else "auto"
+    if complexity == "auto":
+        prompt_lower = req.prompt.lower()
+        if any(term in prompt_lower for term in ("albumqualität", "albumproduktion", "maximal", "hochwertig", "detailreich")):
+            complexity = "album" if duration <= 180.0 else "maximal"
     job = start_job(req.prompt.strip(), duration, complexity)
     return {"job_id": job.job_id}
 

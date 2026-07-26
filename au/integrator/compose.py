@@ -170,13 +170,18 @@ def compose_track(
         for cand_sub_idx in range(budget.variants_per_role):
             sub_id = f"{slot.slot_id}_sec{cand_sub_idx}"
             cand_idx = (slot_idx + cand_sub_idx + int(root_seed.value)) % len(candidates)
+            entry_t = max(0.0, cand_sub_idx * sec_dur - (1.0 if cand_sub_idx > 0 else 0.0))
+            exit_t = min(duration_s, (cand_sub_idx + 1) * sec_dur + 2.0)
             # Das Kandidatenrezept legt das Pattern fest. Ein pauschales
             # Ueberschreiben machte Arpeggiator und Bass zu Poisson-Piepsen.
             pattern_kind = chosen_pattern = candidates[cand_idx].recipe.pattern_kind
 
             chosen = candidates[cand_idx].recipe.model_copy(
                 update={
-                    "duration_s": duration_s,
+                    # Varianten sind echte Abschnitts-/Phrasenfenster. Die
+                    # alte Volltrack-Dauer machte alle Kandidaten zu einer
+                    # statischen, sich ueberlagernden Suppe.
+                    "duration_s": max(2.0, exit_t - entry_t),
                     "id": f"{sub_id}_elm",
                     "pattern_kind": chosen_pattern,
                 }
@@ -190,9 +195,6 @@ def compose_track(
                 layer_id, duration_s, root_seed.child("evo", layer_id), is_continuous=(pattern_kind == "sustained")
             )
             evolution_plans[layer_id] = evo_plan
-
-            entry_t = max(0.0, cand_sub_idx * sec_dur - (1.0 if cand_sub_idx > 0 else 0.0))
-            exit_t = min(duration_s, (cand_sub_idx + 1) * sec_dur + 2.0)
 
             layers.append(
                 LayerInstance(
@@ -214,9 +216,16 @@ def compose_track(
     workflow = build_production_workflow(
         duration_s=duration_s,
         budget_name=budget.name,
+        section_count=budget.section_count,
         roles=tuple(slot.role for slot in slots),
         rack_modules=rack_modules,
     )
+    workflow_errors = workflow.validate_budget(
+        expected_scenes=budget.section_count,
+        expected_roles=len(slots),
+    )
+    if workflow_errors:
+        raise ValueError("Komplexitaetsbudget nicht umgesetzt: " + "; ".join(workflow_errors))
 
     relations = []
     for hint in blueprint.relation_hints:
