@@ -29,6 +29,10 @@ class ElementRecipe(BaseModel):
     name: str = ""
     voice_module_id: str
     voice_params: dict[str, float | str] = Field(default_factory=dict)
+    voice_macros: dict[str, float] = Field(default_factory=dict)
+    """Ueberschreibt die Makro-Grundstellung der Stimme (0..1 je Makro). Der
+    Angriffspunkt des Editor-Agenten (Phase 6): 'waermer' aendert hier
+    ``brightness``, nicht die Rezeptstruktur."""
 
     field: HarmonicField = Field(default_factory=HarmonicField)
     pattern_kind: PatternKind = "poisson"

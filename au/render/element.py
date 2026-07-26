@@ -126,8 +126,14 @@ def render_element(
     graph = _element_graph(recipe.voice_module_id)
     compiled = compile_graph(graph, registry, name=f"elm_{recipe.id}", seed=seed, cfg=c)
 
+    controls = dict(compiled.controls)
+    for macro, value in recipe.voice_macros.items():
+        control_name = f"voice_{macro}"
+        if control_name in controls:
+            controls[control_name] = max(0.0, min(1.0, value))
+
     events = generate_events(recipe, seed)
-    score = build_element_score(compiled.synthdef, compiled.controls, events, recipe, tail_s=tail_s)
+    score = build_element_score(compiled.synthdef, controls, events, recipe, tail_s=tail_s)
     duration = recipe.duration_s + tail_s
     result = render_score(score, output_path, duration=duration, cfg=c)
     return result, events
