@@ -1,0 +1,83 @@
+id: gen.texture.granular_cloud
+version: 1.0.0
+level: 2
+category: generator
+family: texture
+display_name: "Granular-Rausch-Wolke"
+summary: >
+  Sphärische Textur- und Rauschwolke mit variablen Filterbändern und Dichte.
+  Traegt als vollstaendige L2-Stimme den kanonischen Makrosatz.
+
+guarantees:
+  band_hz: [150.0, 14000.0]
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      filter_cutoff: {from: 400.0, to: 8000.0}
+      high_pass:     {from: 50.0, to: 2000.0}
+    curve: exp
+    default: 0.5
+  body:
+    maps:
+      cloud_density: {from: 0.1, to: 1.0}
+      resonance:     {from: 0.1, to: 0.8}
+    curve: lin
+    default: 0.4
+  noise_ratio:
+    maps:
+      noise_blend: {from: 0.2, to: 0.9}
+    curve: exp
+    default: 0.4
+  motion:
+    maps:
+      grain_rate: {from: 0.05, to: 1.5}
+      pan_width:  {from: 0.1, to: 1.0}
+    curve: log
+    default: 0.3
+  material:
+    maps:
+      cloud_type: {from: 0.0, to: 4.0}
+    curve: step
+    default: 0.0
+
+params:
+  cloud_type:
+    enum: [pink, dust, blip_cloud, metallic, ethereal]
+    default: pink
+  filter_cutoff:
+    min: 200.0
+    max: 12000.0
+    default: 2500.0
+  high_pass:
+    min: 20.0
+    max: 3000.0
+    default: 150.0
+  cloud_density:
+    min: 0.05
+    max: 1.0
+    default: 0.5
+  resonance:
+    min: 0.05
+    max: 0.95
+    default: 0.3
+  noise_blend:
+    min: 0.0
+    max: 1.0
+    default: 0.4
+  grain_rate:
+    min: 0.01
+    max: 3.0
+    default: 0.2
+  pan_width:
+    min: 0.0
+    max: 1.0
+    default: 0.6

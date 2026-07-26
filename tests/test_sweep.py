@@ -14,7 +14,14 @@ from au.render.sweep import sweep_macro
 
 pytestmark = [pytest.mark.audio, pytest.mark.slow]
 
-_VOICES = ["gen.drone.wavetable_resonator", "gen.object.modal_bell"]
+_VOICES = [
+    "gen.drone.wavetable_resonator",
+    "gen.object.modal_bell",
+    "gen.drone.sub_bass",
+    "gen.texture.granular_cloud",
+    "gen.arpeggio.pulse_sequence",
+]
+
 
 
 @pytest.fixture(scope="module")

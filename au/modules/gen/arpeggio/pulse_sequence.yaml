@@ -1,0 +1,83 @@
+id: gen.arpeggio.pulse_sequence
+version: 1.0.0
+level: 2
+category: generator
+family: arpeggio
+display_name: "Rhythmische Impuls-Sequenz"
+summary: >
+  Rhythmisch pulsierende Arpeggiator-Stimme mit dynamischer Pulsbreite und Filterhüllkurve.
+  Traegt als vollstaendige L2-Stimme den kanonischen Makrosatz.
+
+guarantees:
+  band_hz: [100.0, 10000.0]
+
+ports:
+  in:
+    - {name: pitch, type: ctrl, unit: midinote, required: true}
+    - {name: excitation, type: audio}
+  out:
+    - {name: out, type: audio, channels: 2}
+    - {name: env_follow, type: analysis}
+
+macros:
+  brightness:
+    maps:
+      filter_env_amt: {from: 0.1, to: 0.9}
+      cutoff_freq:    {from: 300.0, to: 6500.0}
+    curve: exp
+    default: 0.5
+  body:
+    maps:
+      sub_level:   {from: 0.0, to: 0.7}
+      decay_time:  {from: 0.1, to: 1.5}
+    curve: lin
+    default: 0.4
+  noise_ratio:
+    maps:
+      transient_noise: {from: 0.0, to: 0.45}
+    curve: exp
+    default: 0.1
+  motion:
+    maps:
+      pulse_speed: {from: 0.1, to: 2.0}
+      pw_mod:      {from: 0.0, to: 0.4}
+    curve: log
+    default: 0.3
+  material:
+    maps:
+      wave_type: {from: 0.0, to: 4.0}
+    curve: step
+    default: 0.0
+
+params:
+  wave_type:
+    enum: [pulse, saw, triangle, sine_octave, resonant_square]
+    default: pulse
+  cutoff_freq:
+    min: 200.0
+    max: 10000.0
+    default: 1800.0
+  filter_env_amt:
+    min: 0.0
+    max: 1.0
+    default: 0.5
+  sub_level:
+    min: 0.0
+    max: 1.0
+    default: 0.2
+  decay_time:
+    min: 0.05
+    max: 3.0
+    default: 0.4
+  transient_noise:
+    min: 0.0
+    max: 0.6
+    default: 0.1
+  pulse_speed:
+    min: 0.05
+    max: 4.0
+    default: 0.5
+  pw_mod:
+    min: 0.0
+    max: 0.5
+    default: 0.15

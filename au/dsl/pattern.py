@@ -18,7 +18,9 @@ from au.dsl.field import HarmonicField
 
 if TYPE_CHECKING:
     from au.dsl.harmony import ChordTimeline
+    from au.dsl.motif import Phrase
     from au.dsl.rhythm import Clock
+
 
 
 def _degrees_for(field: HarmonicField, chords: ChordTimeline | None, t: float) -> tuple[int, ...]:
@@ -182,3 +184,48 @@ def euclid_sparse_events(
         dur = min(event_duration_s, duration_s - t)
         events.append(NoteEvent(time_s=t, degree=degree, duration_s=dur))
     return events
+
+
+def phrase_events(
+    phrase: Phrase,
+    duration_s: float,
+    *,
+    field: HarmonicField,
+    seed: SeedPath,
+    chords: ChordTimeline | None = None,
+    clock: Clock | None = None,
+    register_shift: int = 0,
+) -> list[NoteEvent]:
+    """Wandelt eine musikalische Phrase in konkrete NoteEvents um."""
+    events: list[NoteEvent] = []
+    phrase_dur = max(4.0, phrase.total_duration_s)
+
+    t_offset = 0.0
+    while t_offset < duration_s:
+        for seg in phrase.segments:
+            seg_start = t_offset + seg.start_time_s
+            if seg_start >= duration_s:
+                break
+
+            motif = seg.motif
+            curr_t = seg_start
+            for note in motif.notes:
+                if curr_t >= duration_s:
+                    break
+                note_dur = note.duration_ratio * motif.step_duration_s
+                if not note.is_rest:
+                    degrees = _degrees_for(field, chords, curr_t)
+                    base_deg = degrees[0] if degrees else 0
+                    final_deg = base_deg + note.degree_offset + seg.transpose_degrees + register_shift
+                    events.append(
+                        NoteEvent(
+                            time_s=curr_t,
+                            degree=final_deg,
+                            duration_s=min(note_dur * 1.2, duration_s - curr_t),
+                            velocity=min(1.0, note.velocity * 0.85),
+                        )
+                    )
+                curr_t += note_dur
+        t_offset += phrase_dur
+    return events
+

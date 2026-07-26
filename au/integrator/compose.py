@@ -31,6 +31,11 @@ from au.integrator.blueprint import derive_blueprint
 from au.integrator.proposals import propose_candidates
 from au.render.track import TrackRenderResult, render_track
 
+from au.analysis.metrics import MusicalQualityReport, analyze_musical_quality
+from au.dsl.harmony import ChordProgression, ChordTimeline, generate_structured_chord_timeline
+from au.dsl.motif import Motif, Phrase, generate_motif, generate_phrase
+from au.dsl.section import Section, SectionArrangement, TrackPlan, generate_section_arrangement
+
 #: Nur diese Relationskinds sind in der Relations-Algebra strukturell pruefbar
 #: (plan.md 7.3, siehe au.dsl.relations); der Rest sind weiche L6-Ziele.
 _STRUCTURAL_KINDS: frozenset[str] = frozenset({"supports", "answers", "avoids", "contrasts"})
@@ -47,6 +52,9 @@ class ComposeResult:
     chords: ChordTimeline
     clock: Clock
     dramaturgy: DramaturgyArc
+    quality_report: MusicalQualityReport
+    section_arrangement: SectionArrangement
+    motifs: tuple[Motif, ...]
 
 
 def compose_track(
@@ -60,7 +68,9 @@ def compose_track(
     cfg: Config | None = None,
     on_progress: Callable[[str], None] | None = None,
 ) -> ComposeResult:
-    """Ein einziger Durchlauf: Prompt -> DNA -> Blueprint -> Layer -> Track."""
+    """Ein einziger Durchlauf: Prompt -> DNA -> Blueprint -> Sektionen -> Motive -> Layer -> Track."""
+    import soundfile as sf
+
     report = on_progress or (lambda _msg: None)
     c = cfg or get_config()
     report("Lade Modulkatalog …")
@@ -76,6 +86,15 @@ def compose_track(
     slots = blueprint.role_slots[:max_slots]
     report(f"Blueprint: {len(slots)} Rollen-Slots ({', '.join(s.role for s in slots)})")
 
+    # Musikalische Struktur-Planung: Sektionen, Akkorde & Motive VORAB erzeugen
+    section_arr = generate_section_arrangement(duration_s)
+    chord_prog = generate_structured_chord_timeline(duration_s, blueprint.field, seed=root_seed.child("harmony"))
+    chords = chord_prog.timeline
+
+    main_motif = generate_motif("motif_main", blueprint.field, root_seed.child("main_motif"), length=4)
+    sec_motif = generate_motif("motif_sec", blueprint.field, root_seed.child("sec_motif"), length=3)
+    main_phrase = generate_phrase("phrase_main", main_motif, root_seed.child("main_phrase"), repetitions=4, pause_s=3.0)
+
     recipes: dict[str, ElementRecipe] = {}
     layers: list[LayerInstance] = []
     role_to_layer: dict[str, str] = {}
@@ -85,21 +104,37 @@ def compose_track(
         candidates = propose_candidates(
             slot, dna, blueprint.field, reg, seed=root_seed.child("propose", slot.slot_id), n=3
         )
+
+        pattern_kind = "sustained" if slot.role in ("foundation", "harmonic_drone", "moving_pad") else "poisson"
         chosen = candidates[0].recipe.model_copy(
-            update={"duration_s": duration_s, "id": f"{slot.slot_id}_elm"}
+            update={
+                "duration_s": duration_s,
+                "id": f"{slot.slot_id}_elm",
+                "pattern_kind": pattern_kind,
+            }
         )
         recipes[chosen.id] = chosen
 
         layer_id = f"{slot.slot_id}_layer"
         role_to_layer[slot.role] = layer_id
+
+        # Gated Layer Activity nach Sektionsplan
+        entry_t = 0.0
+        exit_t = duration_s
+        if slot.role in ("subharmonic_pulse", "moving_pad"):
+            entry_t = section_arr.build[0]
+        elif slot.role in ("signal_motif", "resonant_object", "granular_texture", "arpeggiator"):
+            entry_t = section_arr.peak[0]
+            exit_t = section_arr.peak[1]
+
         layers.append(
             LayerInstance(
                 layer_id=layer_id,
                 element_id=chosen.id,
                 role=slot.role,
                 band_hz=slot.band_hz,
-                entry_time_s=0.0,
-                exit_time_s=duration_s,
+                entry_time_s=entry_t,
+                exit_time_s=exit_t,
                 tail_overhang_s=6.0,
                 lufs_target=slot.lufs,
             )
@@ -134,12 +169,6 @@ def compose_track(
         layers=result.layers,
     )
 
-    # Harmonik-, Rhythmus- und Dramaturgie-Engine: eine geteilte Akkordfolge,
-    # ein geteiltes Zeitraster und ein Gesamtbogen fuer alle Layer -- die
-    # album-/trackweite Konsistenz, die unabhaengige Poisson-Ziehungen pro
-    # Element allein nicht herstellen koennen.
-    report("Erzeuge Akkordfolge, Zeitraster und Dramaturgie-Bogen …")
-    chords = generate_chord_timeline(duration_s, blueprint.field, seed=root_seed.child("harmony"))
     tempo = tempo_from_character(
         dna.character.event_density_mean, dna.character.emotional_temperature[1]
     )
@@ -159,7 +188,11 @@ def compose_track(
         clock=clock,
         dramaturgy=dramaturgy,
     )
-    report(f"Fertig: {track.mix_path.name} ({track.duration_s:.0f}s)")
+
+    # Qualitätsanalyse des finalen Mixes
+    mix_data, sr = sf.read(str(track.mix_path), dtype="float64", always_2d=True)
+    quality = analyze_musical_quality(mix_data, sr)
+    report(f"Musikalische Qualitätsanalyse: {quality.summary()}")
 
     return ComposeResult(
         dna=dna,
@@ -171,4 +204,8 @@ def compose_track(
         chords=chords,
         clock=clock,
         dramaturgy=dramaturgy,
+        quality_report=quality,
+        section_arrangement=section_arr,
+        motifs=(main_motif, sec_motif),
     )
+

@@ -98,8 +98,6 @@ def implements(module_id: str) -> Callable[[Builder], Builder]:
     """
 
     def decorator(fn: Builder) -> Builder:
-        if module_id in _IMPLEMENTATIONS:
-            raise ValueError(f"Fuer {module_id} ist bereits eine Implementierung registriert")
         _IMPLEMENTATIONS[module_id] = fn
         return fn
 
@@ -108,6 +106,8 @@ def implements(module_id: str) -> Callable[[Builder], Builder]:
 
 def get_implementation(module_id: str) -> Builder:
     load_implementations()
+    if module_id not in _IMPLEMENTATIONS:
+        load_implementations(force_reload=True)
     try:
         return _IMPLEMENTATIONS[module_id]
     except KeyError as exc:
@@ -119,6 +119,8 @@ def get_implementation(module_id: str) -> Builder:
 
 def has_implementation(module_id: str) -> bool:
     load_implementations()
+    if module_id not in _IMPLEMENTATIONS:
+        load_implementations(force_reload=True)
     return module_id in _IMPLEMENTATIONS
 
 
@@ -130,10 +132,13 @@ def implemented_ids() -> list[str]:
 _LOADED = False
 
 
-def load_implementations() -> None:
-    """Importiert alle Implementierungsmodule genau einmal."""
+def load_implementations(*, force_reload: bool = False) -> None:
+    """Importiert alle Implementierungsmodule.
+
+    Wenn ``force_reload=True``, werden die Module neu geladen.
+    """
     global _LOADED
-    if _LOADED:
+    if _LOADED and not force_reload:
         return
     _LOADED = True
     import importlib
@@ -145,4 +150,7 @@ def load_implementations() -> None:
         "au.modules.impl.analysis",
         "au.modules.impl.voices",
     ):
-        importlib.import_module(name)
+        mod = importlib.import_module(name)
+        if force_reload:
+            importlib.reload(mod)
+

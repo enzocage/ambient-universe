@@ -71,6 +71,65 @@ def _stack_thirds(root: int, span: int, count: int = 3) -> tuple[int, ...]:
     return tuple(root + step * i for i in range(count))
 
 
+@dataclass(frozen=True, slots=True)
+class ChordProgression:
+    """Eine zusammenhaengende, abschnittsbasierte Akkordfolge."""
+
+    timeline: ChordTimeline
+    progression_type: str
+    section_roots: tuple[int, ...]
+
+
+def generate_structured_chord_timeline(
+    duration_s: float,
+    field: HarmonicField,
+    *,
+    seed: SeedPath,
+    tones_per_chord: int = 3,
+) -> ChordProgression:
+    """Erzeugt eine musikalisch gerichtete Akkordfolge mit Sektionsdramaturgie.
+    
+    Intro (Tonic) -> Build (Subdominant/Mediant) -> Peak (Spannungsakkord) -> Outro (Resolution).
+    """
+    rng = np.random.default_rng(seed.child("harmony", "structured").value & 0xFFFF_FFFF)
+    span = len(MODES.get(field.mode, MODES["ionian"]))
+
+    # Sektions-Grundstufen (Modaler Bogen)
+    patterns = [
+        (0, 2, 4, 0),    # I - III - V - I
+        (0, 3, 5, 0),    # I - IV - VI - I
+        (0, -2, 2, 0),   # I - VII - III - I
+        (0, 4, 2, -1),   # I - V - III - VII
+    ]
+    chosen_roots = patterns[int(rng.integers(0, len(patterns)))]
+
+    num_chords = max(4, int(duration_s / 16.0))
+    chord_dur = duration_s / num_chords
+
+    chords: list[ChordEvent] = []
+    section_roots: list[int] = []
+
+    for i in range(num_chords):
+        t = i * chord_dur
+        section_idx = min(len(chosen_roots) - 1, int((i / num_chords) * len(chosen_roots)))
+        base_root = chosen_roots[section_idx]
+        
+        # Leichte Variation innerhalb der Sektion
+        step = int(rng.choice([0, 1, -1], p=[0.7, 0.15, 0.15]))
+        root = base_root + step
+        section_roots.append(root)
+
+        degrees = _stack_thirds(root, span, tones_per_chord)
+        chords.append(ChordEvent(time_s=t, duration_s=chord_dur, degrees=degrees))
+
+    timeline = ChordTimeline(chords=tuple(chords))
+    return ChordProgression(
+        timeline=timeline,
+        progression_type=f"Modal_{field.mode}",
+        section_roots=tuple(section_roots),
+    )
+
+
 def generate_chord_timeline(
     duration_s: float,
     field: HarmonicField,
@@ -79,32 +138,7 @@ def generate_chord_timeline(
     chord_change_s: tuple[float, float] = (12.0, 28.0),
     tones_per_chord: int = 3,
 ) -> ChordTimeline:
-    """Erzeugt eine durchgehende Akkordfolge ueber die volle Trackdauer.
+    """Erzeugt eine durchgehende Akkordfolge ueber die volle Trackdauer."""
+    prog = generate_structured_chord_timeline(duration_s, field, seed=seed, tones_per_chord=tones_per_chord)
+    return prog.timeline
 
-    Der naechste Akkord wird per Random Walk auf den Modusstufen gewaehlt
-    (kleine Schritte bevorzugt) statt komplett zufaellig -- das vermeidet
-    weite Spruenge, die in Ambient-Harmonik selten sind (plan.md:
-    "sehr langsames Voice Leading").
-    """
-    rng = np.random.default_rng(seed.child("harmony", "chords").value & 0xFFFF_FFFF)
-    span = len(MODES[field.mode])
-    degree_pool = field.degrees()
-    if not degree_pool:
-        degree_pool = tuple(range(span))
-
-    chords: list[ChordEvent] = []
-    t = 0.0
-    current_root = int(rng.choice(degree_pool))
-    while t < duration_s:
-        dur = float(rng.uniform(*chord_change_s))
-        dur = min(dur, duration_s - t)
-        degrees = _stack_thirds(current_root, span, tones_per_chord)
-        chords.append(ChordEvent(time_s=t, duration_s=dur, degrees=degrees))
-        t += dur
-        # Kleiner Schritt auf der Stufenreihe (+-1 bevorzugt, +-2 selten) statt
-        # eines beliebigen Sprungs -- "sehr langsames Voice Leading" (plan.md).
-        step = int(rng.choice([-2, -1, 1, 2], p=[0.15, 0.35, 0.35, 0.15]))
-        # Gelegentlich (15%) ein bewusster groesserer Sprung auf eine neue
-        # zufaellige Stufe -- verhindert, dass die Folge stur monoton driftet.
-        current_root = int(rng.choice(degree_pool)) if rng.random() < 0.15 else current_root + step
-    return ChordTimeline(chords=tuple(chords))

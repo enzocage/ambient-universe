@@ -147,9 +147,15 @@ def render_track(
         stem_paths[bucket] = path
         mix += buffer
 
-    # Sicherheitsstufe auf Summenebene: dieselbe weiche Begrenzung wie im
-    # Compiler, hier als letzte Instanz nach der Summierung mehrerer Layer.
-    ceiling = 0.9
+    # Target Loudness Normalization (ca. -16 LUFS / RMS ~ 0.11)
+    current_rms = float(np.sqrt(np.mean(np.square(mix))))
+    if current_rms > 1e-6:
+        target_rms = 0.11
+        gain = min(3.5, max(0.5, target_rms / current_rms))
+        mix = mix * gain
+
+    # Master Soft Limiter (-1 dBFS Ceiling)
+    ceiling = 0.89
     mix = np.tanh(mix / ceiling) * ceiling
 
     mix_path = output_dir / "mix.wav"
@@ -161,3 +167,4 @@ def render_track(
         duration_s=plan.duration_s + tail_s,
         sample_rate=sample_rate,
     )
+

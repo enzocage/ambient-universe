@@ -286,17 +286,32 @@
         <audio id="mixPlayer" controls></audio>
       </div>
 
+      <h3>Qualitätsanalyse &amp; Quality-Gate</h3>
+      <div id="qualityCard" class="panel" style="background:var(--panel-2); margin-top:8px; padding:12px;"></div>
+
+      <h3>Musikalische Struktur (Akkorde, Motive &amp; Sektionen)</h3>
+      <div id="harmonyCard" class="panel" style="background:var(--panel-2); margin-top:8px; padding:12px;"></div>
+
       <h3>Stems</h3>
       <div class="stem-list" id="stemList"></div>
     </div>
   </div>
 </div>
 
+
 <script>
 const API = "";
 let pollTimer = null;
 
 function el(id) { return document.getElementById(id); }
+
+function setStatus(kind, text) {
+  const dot = el("statusDot");
+  if (dot) dot.className = "dot " + kind;
+  const txt = el("statusText");
+  if (txt) txt.textContent = text;
+}
+
 
 // ---------------------------------------------------------------------------
 // Waveform-Rendering: echte Amplitudenkurve statt eines blossen <audio>-Reglers.
@@ -471,43 +486,41 @@ el("composeBtn").addEventListener("click", async () => {
       body: JSON.stringify({ prompt, duration_s }),
     });
     if (!res.ok) throw new Error(await res.text());
-    const { job_id } = await res.json();
-    poll(job_id);
+    const data = await res.json();
+    activeJobId = data.job_id;
+    poll(activeJobId);
   } catch (e) {
-    setStatus("error", "Fehler beim Start: " + e.message);
+    setStatus("error", "Fehler: " + e.message);
     el("composeBtn").disabled = false;
   }
 });
 
-function setStatus(kind, text) {
-  const dot = el("statusDot");
-  dot.className = "dot " + kind;
-  el("statusText").textContent = text;
-}
-
 function poll(jobId) {
   if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(() => fetchJob(jobId), 700);
-  fetchJob(jobId);
+  pollTimer = setInterval(() => checkJob(jobId), 1200);
+  checkJob(jobId);
 }
 
-async function fetchJob(jobId) {
-  const res = await fetch(API + "/api/jobs/" + jobId);
-  const job = await res.json();
-  renderLog(job);
-  loadHistory();
-
-  if (job.status === "done") {
-    clearInterval(pollTimer);
-    el("composeBtn").disabled = false;
-    setStatus("done", "Fertig — „" + job.result.title + "“");
-    renderResult(job);
-  } else if (job.status === "error") {
-    clearInterval(pollTimer);
-    el("composeBtn").disabled = false;
-    setStatus("error", "Fehlgeschlagen: " + job.error);
-  } else {
-    setStatus("running", "Läuft …");
+async function checkJob(jobId) {
+  try {
+    const res = await fetch(API + "/api/jobs/" + jobId);
+    if (!res.ok) return;
+    const job = await res.json();
+    renderLog(job);
+    if (job.status === "done") {
+      clearInterval(pollTimer);
+      el("composeBtn").disabled = false;
+      setStatus("done", "Fertig — „" + job.result.title + "“");
+      renderResult(job);
+    } else if (job.status === "error") {
+      clearInterval(pollTimer);
+      el("composeBtn").disabled = false;
+      setStatus("error", "Fehlgeschlagen: " + job.error);
+    } else {
+      setStatus("running", "Läuft …");
+    }
+  } catch (e) {
+    console.error(e);
   }
 }
 
@@ -516,7 +529,7 @@ function renderLog(job) {
   el("log").scrollTop = el("log").scrollHeight;
 }
 
-function renderResult(job) {
+async function renderResult(job) {
   const r = job.result;
   el("resultPanel").style.display = "block";
   el("resultTitle").textContent = "Ergebnis — „" + r.title + "“";
@@ -586,6 +599,222 @@ function renderResult(job) {
     const color = stemColors[s.name] || "#7aa2ff";
     attachWaveform(s.url, audioEl, uid + "_wrap", uid + "_canvas", uid + "_status", uid + "_head", color);
   });
+
+  // Render Quality Report Card
+  if (r.quality_report) {
+    const q = r.quality_report;
+    const statusColor = q.accepted ? "var(--ok)" : "var(--err)";
+    const statusTag = q.accepted ? "PASSED" : "REJECTED";
+    el("qualityCard").innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="color:${statusColor}; font-size:0.95rem;">Quality-Gate: ${statusTag}</strong>
+        <span style="font-size:0.8rem; color:var(--muted);">${q.summary}</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; font-size:0.82rem; text-align:center;">
+        <div style="background:var(--panel); padding:8px; border-radius:6px;">
+          <div style="color:var(--muted); font-size:0.75rem;">Lautheit (LUFS)</div>
+          <strong style="color:var(--accent);">${q.lufs_estimated.toFixed(1)} dB</strong>
+        </div>
+        <div style="background:var(--panel); padding:8px; border-radius:6px;">
+          <div style="color:var(--muted); font-size:0.75rem;">Spitzenpegel</div>
+          <strong>${q.peak_dbfs.toFixed(1)} dBFS</strong>
+        </div>
+        <div style="background:var(--panel); padding:8px; border-radius:6px;">
+          <div style="color:var(--muted); font-size:0.75rem;">Aktive Signalzeit</div>
+          <strong style="color:var(--ok);">${Math.round(q.active_signal_ratio * 100)}%</strong>
+        </div>
+        <div style="background:var(--panel); padding:8px; border-radius:6px;">
+          <div style="color:var(--muted); font-size:0.75rem;">Harmonischer Anteil</div>
+          <strong style="color:var(--accent);">${Math.round(q.harmonic_energy_ratio * 100)}%</strong>
+        </div>
+      </div>`;
+  }
+
+  // Render Harmony & Structure Card
+  if (r.harmony && r.sections) {
+    const h = r.harmony;
+    const sec = r.sections;
+    const chordTags = (h.chords || []).map(c => `<span class="tag" style="font-size:0.75rem;">${c.time_s}s: Stufen ${c.degrees.join(",")}</span>`).join(" ");
+    const motifTags = (r.motifs || []).map(m => `<span class="tag" style="background:#262b38; color:#9d7aff; font-size:0.75rem;">${m.name} (${m.length} Töne)</span>`).join(" ");
+
+    el("harmonyCard").innerHTML = `
+      <div style="font-size:0.85rem; margin-bottom:6px;">
+        <strong>Modus:</strong> <span style="color:var(--accent);">${h.mode}</span>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">Akkordfolge &amp; Harmonieentwicklung:</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">${chordTags}</div>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">Generierte Motive:</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">${motifTags}</div>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted);">
+        <strong>Sektionen:</strong> Intro (0–${sec.intro[1]}s) · Aufbau (${sec.build[0]}–${sec.build[1]}s) · Höhepunkt (${sec.peak[0]}–${sec.peak[1]}s) · Outro (${sec.outro[0]}–${sec.outro[1]}s)
+      </div>`;
+  }
+
+  // Render Graph & Layer Inspector
+  if (r.graph_url) {
+    try {
+      const gRes = await fetch(API + r.graph_url);
+      if (gRes.ok) {
+        const graphData = await gRes.json();
+        renderSignalGraph(job.job_id, graphData);
+      }
+    } catch (e) {
+      console.error("Graph konnte nicht geladen werden:", e);
+    }
+  }
+}
+
+
+function renderSignalGraph(jobId, graphData) {
+  const svg = el("graphSvg");
+  svg.innerHTML = "";
+
+  const nodes = graphData.nodes || [];
+  const edges = graphData.edges || [];
+  const layerNodes = nodes.filter(n => n.type === "layer");
+  const rootNode = nodes.find(n => n.type === "root");
+
+  const svgWidth = 650;
+  const svgHeight = Math.max(220, 60 + layerNodes.length * 50);
+  svg.setAttribute("width", svgWidth);
+  svg.setAttribute("height", svgHeight);
+
+  const rootX = 140, rootY = 35;
+  const layerX = 420;
+
+  // Root Node SVG
+  let svgContent = `<g>
+    <rect x="${rootX-110}" y="${rootY-18}" width="220" height="36" rx="8" fill="#1c2333" stroke="#7aa2ff" stroke-width="1.5" />
+    <text x="${rootX}" y="${rootY+5}" fill="#e6e8ee" font-size="12" font-weight="600" text-anchor="middle">${rootNode ? rootNode.label : "Pitch Root"}</text>
+  </g>`;
+
+  // Layer Nodes SVG
+  const nodePositions = {};
+  layerNodes.forEach((n, idx) => {
+    const ly = 60 + idx * 48;
+    nodePositions[n.id] = { x: layerX, y: ly };
+
+    // Connection line from root
+    svgContent += `<path d="M ${rootX+110} ${rootY} C ${rootX+180} ${rootY}, ${layerX-110} ${ly}, ${layerX-110} ${ly}" stroke="#3b4254" stroke-width="1.5" fill="none" />`;
+
+    svgContent += `<g id="svg_node_${n.layer_id}">
+      <rect x="${layerX-110}" y="${ly-18}" width="220" height="36" rx="8" fill="#171b26" stroke="#9d7aff" stroke-width="1.2" />
+      <text x="${layerX}" y="${ly+4}" fill="#7aa2ff" font-size="11" font-weight="600" text-anchor="middle">${n.role} (${n.voice_module_id})</text>
+    </g>`;
+  });
+
+  // Conflicts SVG
+  edges.filter(e => e.kind === "conflict").forEach(e => {
+    const pA = nodePositions[e.src];
+    const pB = nodePositions[e.dst];
+    if (pA && pB) {
+      svgContent += `<path d="M ${pA.x+115} ${pA.y} Q ${pA.x+150} ${(pA.y+pB.y)/2} ${pB.x+115} ${pB.y}" stroke="#e0685f" stroke-dasharray="4,4" stroke-width="1.5" fill="none" />`;
+    }
+  });
+
+  svg.innerHTML = svgContent;
+
+  // Render Layer Inspector Cards
+  const inspector = el("layerInspector");
+  inspector.innerHTML = "";
+  const standardMacros = ["brightness", "body", "noise_ratio", "motion", "material"];
+
+  layerNodes.forEach(n => {
+    const card = document.createElement("div");
+    card.className = "panel";
+    card.style.background = "var(--panel-2)";
+    card.style.padding = "14px";
+    card.style.margin = "0";
+
+    const macroVals = n.macros || {};
+    let sliderHtml = "";
+    standardMacros.forEach(m => {
+      const val = macroVals[m] !== undefined ? macroVals[m] : 0.5;
+      sliderHtml += `
+        <div style="display:flex; align-items:center; gap:8px; font-size:0.78rem;">
+          <span style="width:85px; color:var(--muted);">${m}</span>
+          <input type="range" id="macro_${n.layer_id}_${m}" min="0" max="1" step="0.05" value="${val}" style="flex:1;" />
+          <span id="val_${n.layer_id}_${m}" style="width:32px; text-align:right;">${val.toFixed(2)}</span>
+        </div>`;
+    });
+
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <strong style="color:var(--accent); font-size:0.9rem;">Layer ${n.layer_id} — ${n.role}</strong>
+        <span class="tag" style="font-size:0.75rem;">${n.voice_module_id}</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">
+        Band: ${Math.round(n.band_hz[0])}–${Math.round(n.band_hz[1])} Hz · Zeit: ${n.entry_time_s.toFixed(1)}–${n.exit_time_s.toFixed(1)}s · Transp: ${n.transposition.toFixed(1)} st
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">
+        ${sliderHtml}
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button id="prevBtn_${n.layer_id}" style="padding:6px 14px; font-size:0.8rem;">Solo Vorhören</button>
+        <span id="prevStatus_${n.layer_id}" style="font-size:0.78rem; color:var(--muted);"></span>
+      </div>
+      <div id="prevAudioWrap_${n.layer_id}" style="margin-top:8px; display:none;">
+        <audio id="prevAudio_${n.layer_id}" controls style="width:100%; height:32px;"></audio>
+      </div>`;
+
+    inspector.appendChild(card);
+
+    // Attach listener for slider value updates
+    standardMacros.forEach(m => {
+      const slider = el(`macro_${n.layer_id}_${m}`);
+      const valLabel = el(`val_${n.layer_id}_${m}`);
+      if (slider && valLabel) {
+        slider.addEventListener("input", () => {
+          valLabel.textContent = parseFloat(slider.value).toFixed(2);
+        });
+      }
+    });
+
+    // Attach listener for Solo Preview button
+    const btn = el(`prevBtn_${n.layer_id}`);
+    btn.addEventListener("click", () => triggerLayerPreview(jobId, n.layer_id, standardMacros));
+  });
+}
+
+async function triggerLayerPreview(jobId, layerId, macrosList) {
+  const btn = el(`prevBtn_${layerId}`);
+  const status = el(`prevStatus_${layerId}`);
+  const audioWrap = el(`prevAudioWrap_${layerId}`);
+  const audioEl = el(`prevAudio_${layerId}`);
+
+  btn.disabled = true;
+  status.textContent = "Rendere Vorschau (12s) …";
+
+  const macro_overrides = {};
+  macrosList.forEach(m => {
+    const s = el(`macro_${layerId}_${m}`);
+    if (s) macro_overrides[m] = parseFloat(s.value);
+  });
+
+  try {
+    const res = await fetch(`${API}/api/jobs/${jobId}/layers/${layerId}/preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ macro_overrides, duration_s: 12.0 }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || "Vorschau fehlgeschlagen");
+    }
+    const data = await res.json();
+    status.textContent = "Fertig!";
+    audioWrap.style.display = "block";
+    audioEl.src = data.preview_url + "?t=" + Date.now();
+    audioEl.play();
+  } catch (e) {
+    status.textContent = "Fehler: " + e.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function loadHistory() {

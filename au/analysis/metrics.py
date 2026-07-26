@@ -187,3 +187,124 @@ def stereo_correlation(signal: NDArray[np.float64]) -> float:
     if np.std(left) < 1e-12 or np.std(right) < 1e-12:
         return 1.0
     return float(np.corrcoef(left, right)[0, 1])
+
+
+@dataclass(frozen=True, slots=True)
+class MusicalQualityReport:
+    """Objektiver Bericht ueber die musikalischen & technischen Eigenschaften eines Tracks."""
+
+    peak_dbfs: float
+    rms_dbfs: float
+    lufs_estimated: float
+    active_signal_ratio: float
+    harmonic_energy_ratio: float
+    dc_offset: float
+    clip_ratio: float
+    click_count: int
+    accepted: bool
+    reasons: tuple[str, ...]
+
+    def summary(self) -> str:
+        status = "AKZEPTIERT" if self.accepted else "ABGELEHNT"
+        return (
+            f"[{status}] LUFS: {self.lufs_estimated:.1f} dB · Peak: {self.peak_dbfs:.1f} dBFS · "
+            f"Aktiv: {self.active_signal_ratio:.0%} · Harmonie: {self.harmonic_energy_ratio:.0%} · "
+            f"Begruendung: {', '.join(self.reasons) if self.reasons else 'Optimal'}"
+        )
+
+
+def analyze_musical_quality(
+    signal: NDArray[np.float64],
+    sample_rate: int,
+    *,
+    min_active_ratio: float = 0.75,
+    min_lufs: float = -28.0,
+    max_lufs: float = -10.0,
+    target_lufs_range: tuple[float, float] = (-18.0, -14.0),
+) -> MusicalQualityReport:
+    """Analysiert das Audiosignal objektiv auf Musikalitaet, Pegel, Stille und Artefakte."""
+    if signal.size == 0:
+        return MusicalQualityReport(
+            peak_dbfs=-100.0,
+            rms_dbfs=-100.0,
+            lufs_estimated=-100.0,
+            active_signal_ratio=0.0,
+            harmonic_energy_ratio=0.0,
+            dc_offset=0.0,
+            clip_ratio=0.0,
+            click_count=0,
+            accepted=False,
+            reasons=("Audiosignal ist leer",),
+        )
+
+    peak_val = peak(signal)
+    rms_val = rms(signal)
+    peak_dbfs = 20.0 * np.log10(max(1e-6, peak_val))
+    rms_dbfs = 20.0 * np.log10(max(1e-6, rms_val))
+
+    lufs_est = rms_dbfs + 3.0
+
+    frame_size = max(1, sample_rate // 10)
+    mono = signal if signal.ndim == 1 else np.mean(np.abs(signal), axis=1)
+    num_frames = mono.size // frame_size
+    if num_frames > 0:
+        reshaped = mono[: num_frames * frame_size].reshape(num_frames, frame_size)
+        frame_rms = np.sqrt(np.mean(np.square(reshaped), axis=1))
+        active_frames = np.sum(frame_rms > 0.003)
+        active_ratio = float(active_frames / num_frames)
+    else:
+        active_ratio = 1.0
+
+    start_idx = int(mono.size * 0.15)
+    end_idx = min(mono.size, start_idx + sample_rate * 10)
+    sample_segment = mono[start_idx:end_idx] if end_idx > start_idx else mono
+    fft_vals = np.abs(np.fft.rfft(sample_segment))
+    if fft_vals.size > 0:
+        fft_peaks = np.sort(fft_vals)[::-1]
+        tonal_energy = float(np.sum(fft_peaks[: min(30, fft_peaks.size)]))
+        total_energy = float(np.sum(fft_vals)) + 1e-9
+        harmonic_ratio = float(min(1.0, (tonal_energy / total_energy) * 5.0))
+    else:
+        harmonic_ratio = 0.5
+
+    dc_val = dc_offset(signal)
+    clip_val = clip_ratio(signal)
+
+    clicks = detect_clicks(signal, sample_rate)
+
+    reasons: list[str] = []
+    accepted = True
+
+    if active_ratio < min_active_ratio:
+        accepted = False
+        reasons.append(f"Zu viel Stille (Aktiver Anteil {active_ratio:.0%} < {min_active_ratio:.0%})")
+
+    if lufs_est < min_lufs:
+        accepted = False
+        reasons.append(f"Signal zu leise ({lufs_est:.1f} LUFS < {min_lufs:.1f} LUFS)")
+
+    if clip_val > 0.001:
+        accepted = False
+        reasons.append(f"Clipping festgestellt ({clip_val:.2%} Samples)")
+
+    if clicks.count > 0:
+        accepted = False
+        reasons.append(f"{clicks.count} Klick-Artefakt(e) erkannt")
+
+    if harmonic_ratio < 0.10:
+        accepted = False
+        reasons.append("Track besteht ueberwiegend aus unbestimmtem Rauschen ohne Tonalitaet")
+
+    return MusicalQualityReport(
+        peak_dbfs=float(peak_dbfs),
+        rms_dbfs=float(rms_dbfs),
+        lufs_estimated=float(lufs_est),
+        active_signal_ratio=float(active_ratio),
+        harmonic_energy_ratio=float(harmonic_ratio),
+        dc_offset=float(dc_val),
+        clip_ratio=float(clip_val),
+        click_count=clicks.count,
+        accepted=accepted,
+        reasons=tuple(reasons),
+    )
+

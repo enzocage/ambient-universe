@@ -138,3 +138,27 @@ def test_search_finds_by_voice_similarity(
 
     similar = lib_index.find_similar_by_voice("gen.object.modal_bell", cfg=cfg)
     assert any(r.id == base_recipe.id for r in similar)
+
+
+# -- Studio API Endpunkte -----------------------------------------------------
+
+
+def test_api_modules_lists_all_generators_and_voices() -> None:
+    from au.studio.api import modules
+
+    mod_list = modules()
+    mod_ids = {m["id"] for m in mod_list}
+    assert "gen.drone.sub_bass" in mod_ids
+    assert "gen.texture.granular_cloud" in mod_ids
+    assert "gen.arpeggio.pulse_sequence" in mod_ids
+
+
+def test_api_job_graph_raises_404_for_unknown_job() -> None:
+    from fastapi import HTTPException
+
+    from au.studio.api import job_graph
+
+    with pytest.raises(HTTPException) as exc_info:
+        job_graph("nonexistent_job_id")
+    assert exc_info.value.status_code == 404
+

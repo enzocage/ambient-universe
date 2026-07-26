@@ -86,3 +86,40 @@ class TrackPlan(BaseModel):
     def layers_in(self, section: Section) -> list[LayerInstance]:
         wanted = set(section.layer_ids)
         return [layer for layer in self.layers if layer.layer_id in wanted]
+
+
+class SectionArrangement(BaseModel):
+    """Geplante Zeitabschnitte fuer den musikalischen Verlauf eines Tracks."""
+
+    model_config = {"frozen": True}
+
+    intro: tuple[float, float]
+    build: tuple[float, float]
+    peak: tuple[float, float]
+    outro: tuple[float, float]
+
+    def is_active_in_section(self, role: str, t: float) -> bool:
+        """Prueft, ob eine Rolle zum Zeitpunkt t dramaturgisch aktiv sein soll."""
+        if role in ("foundation", "harmonic_drone"):
+            return True
+        if role in ("atmospheric_noise", "space_noise_elements"):
+            return t < self.outro[1]
+        if role in ("subharmonic_pulse", "moving_pad"):
+            return self.build[0] <= t <= self.outro[0]
+        if role in ("signal_motif", "resonant_object", "granular_texture", "arpeggiator", "bass_sequence"):
+            return self.peak[0] <= t <= self.peak[1]
+        return True
+
+
+def generate_section_arrangement(duration_s: float) -> SectionArrangement:
+    """Erzeugt 4 musikalische Phasen (Intro, Aufbau, Hoehepunkt, Outro)."""
+    t_intro = duration_s * 0.18
+    t_build = duration_s * 0.42
+    t_peak = duration_s * 0.80
+    return SectionArrangement(
+        intro=(0.0, t_intro),
+        build=(t_intro, t_build),
+        peak=(t_build, t_peak),
+        outro=(t_peak, duration_s),
+    )
+

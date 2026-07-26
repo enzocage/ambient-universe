@@ -175,3 +175,128 @@ def build_modal_bell(ctx: BuildContext) -> Signals:
 
     envelope = abs(normalized).lagged(0.08)
     return {"out": [left * 0.6, right * 0.6], "env_follow": envelope}
+
+
+# ---------------------------------------------------------------------------
+# gen.drone.sub_bass
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.drone.sub_bass")
+def build_sub_bass(ctx: BuildContext) -> Signals:
+    """Tiefes Sub-Bass-Fundament mit modulierbarer Saettigung."""
+    from supriya.ugens import DelayN, HPF, LFNoise2, LPF, SinOsc
+
+    pitch = ctx.input("pitch", 36.0)
+    frequency = _midi_to_hz(pitch)
+
+    sub_gain = ctx.param("sub_gain", 0.7)
+    sub_cutoff = ctx.param("sub_cutoff", 400.0)
+    drive = ctx.param("drive", 0.2)
+    rumble_mix = ctx.param("rumble_mix", 0.05)
+    lfo_rate = ctx.param("lfo_rate", 0.1)
+    wobble_depth = ctx.param("wobble_depth", 0.1)
+    bass_boost = ctx.param("bass_boost", 0.5)
+
+    lfo = LFNoise2.kr(frequency=lfo_rate) * wobble_depth  # type: ignore[attr-defined]
+    detuned_freq = frequency * (1.0 + lfo)
+
+    sub_osc = SinOsc.ar(frequency=detuned_freq) * sub_gain * 0.5  # type: ignore[attr-defined]
+    oct_sub = SinOsc.ar(frequency=detuned_freq * 0.5) * sub_gain * bass_boost * 0.3  # type: ignore[attr-defined]
+
+    raw = sub_osc + oct_sub
+    if ctx.has_input("excitation"):
+        raw = raw + ctx.input("excitation") * rumble_mix * 0.2
+
+    saturated = (raw * (1.0 + drive * 2.0)).tanh()
+    filtered = LPF.ar(source=saturated, frequency=sub_cutoff)  # type: ignore[attr-defined]
+    filtered = HPF.ar(source=filtered, frequency=20.0)  # type: ignore[attr-defined]
+
+    delayed = DelayN.ar(source=filtered, maximum_delay_time=0.02, delay_time=0.008)  # type: ignore[attr-defined]
+    left = filtered * 0.8 + delayed * 0.2
+    right = filtered * 0.8 - delayed * 0.2
+
+    envelope = abs(filtered).lagged(0.08)
+    return {"out": [left * 0.4, right * 0.4], "env_follow": envelope}
+
+
+# ---------------------------------------------------------------------------
+# gen.texture.granular_cloud
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.texture.granular_cloud")
+def build_granular_cloud(ctx: BuildContext) -> Signals:
+    """Atmosphaerische Rausch- und Texturwolke."""
+    from supriya.ugens import BPF, HPF, LFNoise2, PinkNoise, WhiteNoise
+
+    pitch = ctx.input("pitch", 60.0)
+    frequency = _midi_to_hz(pitch)
+
+    filter_cutoff = ctx.param("filter_cutoff", 2500.0)
+    high_pass = ctx.param("high_pass", 150.0)
+    cloud_density = ctx.param("cloud_density", 0.5)
+    resonance = ctx.param("resonance", 0.3)
+    noise_blend = ctx.param("noise_blend", 0.4)
+    grain_rate = ctx.param("grain_rate", 0.2)
+
+    excitation = ctx.input("excitation")
+    if excitation is None:
+        excitation = PinkNoise.ar() * noise_blend  # type: ignore[attr-defined]
+    else:
+        excitation = excitation + WhiteNoise.ar() * noise_blend * 0.3  # type: ignore[attr-defined]
+
+    wobble = LFNoise2.kr(frequency=grain_rate) * 200.0  # type: ignore[attr-defined]
+    center_freq = (frequency + filter_cutoff + wobble).clip(100.0, 14000.0)
+
+    rq = (1.0 - resonance * 0.85).clip(0.05, 1.0)
+    band_filtered = BPF.ar(source=excitation * cloud_density, frequency=center_freq, reciprocal_of_q=rq)  # type: ignore[attr-defined]
+    hp_filtered = HPF.ar(source=band_filtered, frequency=high_pass)  # type: ignore[attr-defined]
+
+    pan_wobble = LFNoise2.kr(frequency=grain_rate * 0.7) * 0.4  # type: ignore[attr-defined]
+    left = hp_filtered * (0.5 + pan_wobble)
+    right = hp_filtered * (0.5 - pan_wobble)
+
+    envelope = abs(hp_filtered).lagged(0.1)
+    return {"out": [left * 2.0, right * 2.0], "env_follow": envelope}
+
+
+
+
+# ---------------------------------------------------------------------------
+# gen.arpeggio.pulse_sequence
+# ---------------------------------------------------------------------------
+
+
+@implements("gen.arpeggio.pulse_sequence")
+def build_pulse_sequence(ctx: BuildContext) -> Signals:
+    """Rhythmischer Pulsator mit dynamischer Filterung."""
+    from supriya.ugens import HPF, LPF, SinOsc, VarSaw
+
+    pitch = ctx.input("pitch", 48.0)
+    frequency = _midi_to_hz(pitch)
+
+    cutoff_freq = ctx.param("cutoff_freq", 1800.0)
+    filter_env_amt = ctx.param("filter_env_amt", 0.5)
+    sub_level = ctx.param("sub_level", 0.2)
+    decay_time = ctx.param("decay_time", 0.4)
+    pulse_speed = ctx.param("pulse_speed", 0.5)
+    pw_mod = ctx.param("pw_mod", 0.15)
+
+    lfo = SinOsc.kr(frequency=pulse_speed) * pw_mod + 0.5  # type: ignore[attr-defined]
+    pulse_osc = VarSaw.ar(frequency=frequency, width=lfo.clip(0.1, 0.9)) * 0.4  # type: ignore[attr-defined]
+    sub_osc = VarSaw.ar(frequency=frequency * 0.5, width=0.5) * sub_level * 0.2  # type: ignore[attr-defined]
+
+    sig = pulse_osc + sub_osc
+    if ctx.has_input("excitation"):
+        sig = sig + ctx.input("excitation") * 0.1
+
+    filt_freq = (cutoff_freq * (1.0 + filter_env_amt * 2.0)).clip(80.0, 14000.0)
+    filtered = LPF.ar(source=sig, frequency=filt_freq)  # type: ignore[attr-defined]
+    filtered = HPF.ar(source=filtered, frequency=30.0)  # type: ignore[attr-defined]
+
+    envelope = abs(filtered).lagged(0.01 + decay_time * 0.1)
+    return {"out": [filtered * 0.45, filtered * 0.45], "env_follow": envelope}
+
+
+
