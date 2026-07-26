@@ -28,6 +28,7 @@ from au.dsl.harmony import (
     ChordTimeline,
     generate_structured_chord_timeline,
 )
+from au.dsl.hierarchy import HierarchicalScore, build_default_hierarchical_score
 from au.dsl.layer import LayerInstance
 from au.dsl.motif import Motif, generate_motif, generate_phrase
 from au.dsl.motif_transformations import TransformedMotif, transform_motif
@@ -64,6 +65,7 @@ class ComposeResult:
     evolution_plans: dict[str, EvolutionPlan]
     tone_dnas: dict[str, ToneDNA]
     transformed_motifs: tuple[TransformedMotif, ...]
+    hierarchy: HierarchicalScore
 
 
 
@@ -122,6 +124,11 @@ def compose_track(
     main_motif = generate_motif("motif_main", blueprint.field, root_seed.child("main_motif"), length=4)
     sec_motif = generate_motif("motif_sec", blueprint.field, root_seed.child("sec_motif"), length=3)
     main_phrase = generate_phrase("phrase_main", main_motif, root_seed.child("main_phrase"), repetitions=4, pause_s=3.0)
+    hierarchy = build_default_hierarchical_score(
+        duration_s=duration_s,
+        motif_id=main_motif.id,
+        active_roles=tuple(slot.role for slot in slots),
+    )
 
     # Motiv-Transformationen für Sektionskontraste
     t_motif_1 = transform_motif(main_motif, blueprint.field, root_seed.child("t_motif_1"), kind="transposed", step_shift=3)
@@ -263,4 +270,5 @@ def compose_track(
         evolution_plans=evolution_plans,
         tone_dnas=tone_dnas,
         transformed_motifs=transformed_motifs,
+        hierarchy=hierarchy,
     )
