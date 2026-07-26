@@ -19,7 +19,7 @@ from au.arrange.solver import SolveResult, solve
 from au.core.config import Config, get_config
 from au.core.registry import Registry, load_registry
 from au.core.seeds import SeedPath
-from au.dsl.blueprint import Blueprint
+from au.dsl.blueprint import Blueprint, RoleSlot
 from au.dsl.dna import AlbumDNA
 from au.dsl.dramaturgy import DramaturgyArc, generate_arc
 from au.dsl.element import ElementRecipe
@@ -93,7 +93,24 @@ def compose_track(
     report(f"DNA: „{dna.title}“ — {', '.join(dna.character.descriptors[:5])}")
 
     blueprint = derive_blueprint(dna)
-    slots = blueprint.role_slots[:max_slots]
+    # Ein Slotlimit darf die rhythmische Kernbesetzung nicht zufaellig abschneiden.
+    # Pflichtrollen werden zuerst reserviert; optionale Texturen fuellen den Rest.
+    required_order = (
+        "foundation",
+        "harmonic_drone",
+        "bass_sequence",
+        "arpeggiator",
+        "subtle_percussive_background",
+    )
+    available = list(blueprint.role_slots)
+    selected: list[RoleSlot] = []
+    for role in required_order:
+        slot = next((candidate for candidate in available if candidate.role == role), None)
+        if slot is not None and len(selected) < max_slots:
+            selected.append(slot)
+            available.remove(slot)
+    selected.extend(available[: max(0, max_slots - len(selected))])
+    slots = tuple(selected)
     report(f"Blueprint: {len(slots)} Rollen-Slots ({', '.join(s.role for s in slots)})")
 
     # Musikalische Struktur-Planung: Sektionen, Akkorde & Motive VORAB erzeugen
@@ -137,13 +154,15 @@ def compose_track(
         for cand_sub_idx in range(5):
             sub_id = f"{slot.slot_id}_sec{cand_sub_idx}"
             cand_idx = (slot_idx + cand_sub_idx + int(root_seed.value)) % len(candidates)
-            pattern_kind = "sustained" if slot.role in ("foundation", "harmonic_drone", "moving_pad") else "poisson"
+            # Das Kandidatenrezept legt das Pattern fest. Ein pauschales
+            # Ueberschreiben machte Arpeggiator und Bass zu Poisson-Piepsen.
+            pattern_kind = chosen_pattern = candidates[cand_idx].recipe.pattern_kind
 
             chosen = candidates[cand_idx].recipe.model_copy(
                 update={
                     "duration_s": duration_s,
                     "id": f"{sub_id}_elm",
-                    "pattern_kind": pattern_kind,
+                    "pattern_kind": chosen_pattern,
                 }
             )
             recipes[chosen.id] = chosen
@@ -245,5 +264,3 @@ def compose_track(
         tone_dnas=tone_dnas,
         transformed_motifs=transformed_motifs,
     )
-
-

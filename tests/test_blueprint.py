@@ -26,6 +26,12 @@ def test_blueprint_has_the_mandatory_roles() -> None:
     assert {"foundation", "harmonic_drone", "atmospheric_noise"} <= roles
 
 
+def test_rhythmically_dense_blueprint_reserves_bass_and_arpeggio() -> None:
+    bp = derive_blueprint(_dna("Rhythmisch, sequenziert, pulsierend und dicht.", seed=9))
+    roles = {s.role for s in bp.role_slots}
+    assert {"bass_sequence", "arpeggiator"} <= roles
+
+
 def test_every_slot_has_a_rationale_referencing_dna() -> None:
     bp = derive_blueprint(_dna("Ein dichtes, texturreiches, weites Album."))
     for slot in bp.role_slots:

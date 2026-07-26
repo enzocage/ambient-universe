@@ -44,6 +44,14 @@ def _wanted_roles(dna: AlbumDNA) -> list[str]:
     c = dna.character
     roles = list(_ALWAYS_PRESENT)
 
+    # Rhythmische DNA bekommt eigene musikalische Stimmen. Diese Rollen muessen
+    # bereits im Blueprint existieren; eine spaetere Katalogauswahl kann keinen
+    # Rhythmus erzeugen, wenn nur Flaechen-Slots geplant wurden.
+    if c.event_density_mean >= 0.18:
+        roles.extend(("bass_sequence", "arpeggiator"))
+    if c.event_density_mean >= 0.28:
+        roles.append("subtle_percussive_background")
+
     if c.event_density_mean >= 0.08:
         roles.append("granular_texture")
     if c.spatial_width >= 0.5:
@@ -84,6 +92,9 @@ def _rationale(role: str, dna: AlbumDNA) -> str:
         "subharmonic_pulse": "Kalt und tief zugleich verlangt Koerperlichkeit im Fundament.",
         "contrast_layer": f"innovation.formal={dna.innovation_vector.formal:.2f} erlaubt bewusste Erwartungsbrueche.",
         "negative_layer": f"silence_probability={c.silence_probability:.2f} macht Stille zum geplanten Ereignis.",
+        "bass_sequence": f"event_density_mean={c.event_density_mean:.2f} verlangt eine bewegte Basslinie.",
+        "arpeggiator": f"event_density_mean={c.event_density_mean:.2f} erlaubt eine gebundene Notenfolge.",
+        "subtle_percussive_background": f"event_density_mean={c.event_density_mean:.2f} erlaubt einen gemeinsamen Pulsanker.",
     }
     return reasons.get(role, "")
 

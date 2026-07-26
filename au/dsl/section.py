@@ -21,13 +21,16 @@ ArcShape = Literal["emergence", "arch", "descent", "plateau_with_event"]
 STEM_BUCKETS: dict[str, str] = {
     "foundation": "foundation",
     "subharmonic_pulse": "foundation",
+    "bass_sequence": "bass",
     "harmonic_drone": "harmonic",
     "moving_pad": "harmonic",
+    "arpeggiator": "arpeggio_motif",
+    "signal_motif": "arpeggio_motif",
+    "subtle_percussive_background": "percussion",
     "granular_texture": "texture",
     "atmospheric_noise": "texture",
     "spectral_shimmer": "texture",
     "resonant_object": "objects",
-    "signal_motif": "objects",
     "contrast_layer": "objects",
     "negative_layer": "objects",
 }
@@ -122,4 +125,3 @@ def generate_section_arrangement(duration_s: float) -> SectionArrangement:
         peak=(t_build, t_peak),
         outro=(t_peak, duration_s),
     )
-

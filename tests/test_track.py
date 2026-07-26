@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 import soundfile as sf
 
+from au.dsl.section import STEM_BUCKETS
+
 from au.analysis.arc import arc_fit
 from au.analysis.metrics import stereo_correlation
 from au.core.registry import Registry, load_registry
@@ -25,6 +27,12 @@ from au.dsl.section import Section, TrackPlan
 from au.render.track import render_track
 
 pytestmark = [pytest.mark.audio, pytest.mark.slow]
+
+
+def test_rhythm_roles_have_dedicated_stems() -> None:
+    assert STEM_BUCKETS["bass_sequence"] == "bass"
+    assert STEM_BUCKETS["arpeggiator"] == "arpeggio_motif"
+    assert STEM_BUCKETS["subtle_percussive_background"] == "percussion"
 
 
 @pytest.fixture(scope="module")
